@@ -62,7 +62,7 @@ async def generate_flashcards(text: str, card_type: str = "Standard", selected_m
     json_structure += '      "definitions": [{"term": "Term", "definition": "Definition"}]\n    }'
 
     prompt = f"""
-You are LearnAID, an intelligent AI study assistant.
+You are Cognify, an intelligent AI study assistant.
 
 Your task is to transform the provided text into a complete, structured, high-quality learning module.
 
@@ -292,7 +292,7 @@ async def chat_with_ai(messages: list, context_text: str):
     """
     Passes conversational history and source context to the LLM to act as a study tutor.
     """
-    system_prompt = f"""You are LearnAID, an intelligent AI tutor.
+    system_prompt = f"""You are Cognify, an intelligent AI tutor.
 
 Your primary responsibility is to answer questions based on the provided Source Material.
 
