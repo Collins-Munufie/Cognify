@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Loader2 } from 'lucide-react';
+import Logo from './Logo';
 import { GoogleLogin } from '@react-oauth/google';
 
 export default function AuthPage() {
@@ -56,17 +57,19 @@ export default function AuthPage() {
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md glass-panel p-8 rounded-3xl border border-brand-border relative overflow-hidden"
+        className="w-full max-w-md p-8 glass-panel rounded-3xl border border-brand-border shadow-[0_0_50px_rgba(139,92,246,0.15)] relative"
       >
-        <div className="flex justify-center mb-8">
-          <div className="p-3 bg-brand-primary/20 rounded-2xl">
-            <BrainCircuit className="w-10 h-10 text-brand-primary" />
-          </div>
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-brand-primary/5 to-transparent rounded-3xl pointer-events-none"></div>
+            
+        <div className="flex flex-col items-center text-center mb-8 relative z-10">
+           <div className="mb-4">
+              <Logo size="default" showText={false} />
+           </div>
+           <h2 className="text-3xl font-bold text-brand-text mb-2 tracking-tight">
+              {isLogin ? "Welcome Back" : "Create Account"}
+           </h2>
         </div>
-        
-        <h2 className="text-3xl font-bold text-center mb-2 text-brand-text">
-          {isLogin ? "Welcome Back" : "Create Account"}
-        </h2>
+
         <p className="text-brand-muted text-center mb-8">
           {isLogin ? "Enter your credentials to access your flashcards." : "Sign up to start saving your flashcard sets."}
         </p>

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Loader2, Play, Plus, BookOpen, Download, Database, CheckCircle2, TrendingUp, Compass, Target, Hash, CheckSquare, Layers, Clock, ArrowRight, Trash2, Edit2, UserCircle, Mail, LogOut, X } from 'lucide-react';
+import Logo from './Logo';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell } from 'recharts';
 
@@ -173,12 +174,7 @@ export default function Dashboard() {
       {/* 1. HEADER / NAVBAR */}
       <header className="sticky top-0 z-50 bg-brand-surface/80 backdrop-blur-md border-b border-brand-border">
          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <div className="p-2.5 bg-brand-primary/20 rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.3)]">
-                 <BrainCircuit className="w-6 h-6 text-brand-primary" />
-               </div>
-               <h1 className="text-2xl font-bold tracking-tight">Learn<span className="text-brand-primary">AID</span></h1>
-            </div>
+            <Logo size="small" />
             
             <div className="flex items-center gap-6 relative">
                <div 

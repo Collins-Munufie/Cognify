@@ -13,7 +13,7 @@ function App() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <div className="w-12 h-12 border-4 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-brand-muted">Initializing LearnAID...</p>
+        <p className="mt-4 text-brand-muted">Initializing Cognify...</p>
       </div>
     );
   }

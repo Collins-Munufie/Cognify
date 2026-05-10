@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, X, RotateCcw, BrainCircuit, Play, Layers, CheckCircle2, Type, ArrowRight, Target, AlignLeft, BookOpen, Headphones, PlayCircle, PauseCircle, StopCircle, Hash, FileText } from 'lucide-react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import StudyChat from './StudyChat';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +20,7 @@ export default function StudyMode() {
   const [sessionComplete, setSessionComplete] = useState(false);
   
   const [activeMode, setActiveMode] = useState('notes');
+  const [podcastVoice, setPodcastVoice] = useState('Conversational Mode');
 
   const { fetchUser, user } = useAuth(); // AuthContext to refresh stats
 
@@ -207,31 +209,75 @@ export default function StudyMode() {
 
     setIsPlaying(true);
     
-    const summaryText = flashcardSet.summary || "No summary found.";
-    const keyPointsArray = flashcardSet.key_points || [];
+    const podcastScript = flashcardSet.podcast_script;
+    let rawScript = [];
 
-    const rawScript = [
-      { text: `Welcome back to your Study Cast. Today we are focusing on: ${flashcardSet.title}. Let's jump in!`, voice: 0 },
-      { text: `Sounds great. Here is the executive overview: ${summaryText}`, voice: 1 },
-      { text: `Excellent. Now, let's go over the key concepts you need to memorize.`, voice: 0 }
-    ];
+    if (podcastScript) {
+      // Split the script into sentences to prevent TTS engines from cutting off long strings
+      rawScript.push({ text: `Welcome to your Study Cast! Today's topic is: ${flashcardSet.title}. Let's dive right in.`, voice: 0 });
+      
+      const sentences = podcastScript.match(/[^.!?]+[.!?]+/g) || [podcastScript];
+      sentences.forEach(sentence => {
+        if (sentence.trim()) {
+           rawScript.push({ text: sentence.trim(), voice: 1 });
+        }
+      });
+      
+      rawScript.push({ text: "That wraps up this episode. Keep studying and stay curious!", voice: 0 });
+    } else {
+      // Fallback for older study sets
+      const summaryText = flashcardSet.summary || "No summary found.";
+      const keyPointsArray = flashcardSet.key_points || [];
 
-    keyPointsArray.forEach((kp, i) => {
-       rawScript.push({ text: `Key point number ${i+1}. ${kp}`, voice: i % 2 === 0 ? 1 : 0 });
-    });
-    
-    rawScript.push({ text: "That wraps up this learning session. Good luck reviewing your flashcards!", voice: 0 });
+      rawScript = [
+        { text: `Welcome back to your Study Cast. Today we are focusing on: ${flashcardSet.title}. Let's jump in!`, voice: 0 },
+        { text: `Sounds great. Here is the executive overview: ${summaryText}`, voice: 1 },
+        { text: `Excellent. Now, let's go over the key concepts you need to memorize.`, voice: 0 }
+      ];
+
+      keyPointsArray.forEach((kp, i) => {
+         rawScript.push({ text: `Key point number ${i+1}. ${kp}`, voice: i % 2 === 0 ? 1 : 0 });
+      });
+      
+      rawScript.push({ text: "That wraps up this learning session. Good luck reviewing your flashcards!", voice: 0 });
+    }
 
     const voices = synth.getVoices();
-    // Try to find two distinct voices, fallback to defaults
-    const voice1 = voices.find(v => v.name.includes("Google") || v.lang.includes("en-US")) || voices[0];
-    const voice2 = voices.reverse().find(v => v.name !== voice1?.name && v.lang.includes("en")) || voices[1] || voices[0];
+    let voice1, voice2;
+    let pitch1 = 1, pitch2 = 1.1;
+    let rate1 = 0.95, rate2 = 0.95;
+
+    // Helper to find voice by keyword
+    const findVoice = (keywords) => voices.find(v => keywords.some(k => v.name.toLowerCase().includes(k))) || voices.find(v => v.lang.includes("en")) || voices[0];
+
+    if (podcastVoice === 'Warm Female Tutor') {
+       voice1 = voice2 = findVoice(['female', 'samantha', 'zira', 'victoria', 'karen']);
+       pitch1 = pitch2 = 1.15; // Slightly higher pitch for warmth
+    } else if (podcastVoice === 'Deep Male Narrator') {
+       voice1 = voice2 = findVoice(['male', 'david', 'alex', 'daniel', 'mark']);
+       pitch1 = pitch2 = 0.8; // Lower pitch for deep narrator
+       rate1 = rate2 = 0.9; // Slightly slower
+    } else if (podcastVoice === 'Default AI Voice') {
+       voice1 = voice2 = voices[0];
+    } else {
+       // Conversational Mode (2 distinct voices)
+       voice1 = findVoice(['female', 'samantha', 'zira']) || voices[0];
+       voice2 = [...voices].reverse().find(v => v.name !== voice1?.name && v.lang.includes("en")) || voices[1] || voices[0];
+       pitch1 = 1.1; pitch2 = 0.9;
+    }
 
     rawScript.forEach(line => {
       const utterance = new SpeechSynthesisUtterance(line.text);
-      utterance.voice = line.voice === 0 ? voice1 : voice2;
-      utterance.rate = 0.95;
-      utterance.pitch = line.voice === 0 ? 1 : 1.1; // simulate slight variation
+      
+      if (podcastVoice === 'Conversational Mode') {
+         utterance.voice = line.voice === 0 ? voice1 : voice2;
+         utterance.pitch = line.voice === 0 ? pitch1 : pitch2;
+         utterance.rate = line.voice === 0 ? rate1 : rate2;
+      } else {
+         utterance.voice = voice1;
+         utterance.pitch = pitch1;
+         utterance.rate = rate1;
+      }
       
       utterance.onend = () => {
          if (line === rawScript[rawScript.length - 1]) setIsPlaying(false);
@@ -412,35 +458,68 @@ export default function StudyMode() {
                    <div>
                      <h2 className="text-3xl font-bold text-brand-text mb-2">Study Cast</h2>
                      <p className="text-brand-muted text-lg">{flashcardSet.title}</p>
-                     <p className="text-sm text-brand-muted mt-2 opacity-70">A 2-host AI simulation reading your Summary and Key Concepts.</p>
+                     <p className="text-sm text-brand-muted mt-2 opacity-70">A highly engaging, conversational AI playback.</p>
                    </div>
 
-                   <div className="flex gap-4">
-                     <button 
-                       onClick={togglePodcast} 
-                       className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all flex items-center gap-3 text-lg"
-                     >
-                       {isPlaying ? <><PauseCircle className="w-6 h-6"/> Pause</> : <><PlayCircle className="w-6 h-6"/> Listen to Podcast</>}
-                     </button>
-                     {isPlaying && (
-                       <button 
-                         onClick={stopPodcast} 
-                         className="px-6 py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-bold hover:scale-105 transition-all flex items-center gap-3 text-lg"
+                   <div className="flex flex-col items-center gap-6">
+                     <div className="flex items-center gap-3">
+                       <label className="text-brand-muted font-medium">Voice Style:</label>
+                       <select 
+                         value={podcastVoice}
+                         onChange={(e) => {
+                           setPodcastVoice(e.target.value);
+                           if(isPlaying) stopPodcast(); // Stop if playing to apply new voice
+                         }}
+                         className="bg-brand-surface border border-brand-border text-brand-text px-4 py-2 rounded-xl focus:outline-none focus:border-brand-primary cursor-pointer"
                        >
-                         <StopCircle className="w-6 h-6"/> Stop
+                         <option value="Conversational Mode">Conversational Mode (2 Hosts)</option>
+                         <option value="Warm Female Tutor">Warm Female Tutor</option>
+                         <option value="Deep Male Narrator">Deep Male Narrator</option>
+                         <option value="Default AI Voice">Default AI Voice</option>
+                       </select>
+                     </div>
+
+                     <div className="flex gap-4">
+                       <button 
+                         onClick={togglePodcast} 
+                         className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all flex items-center gap-3 text-lg"
+                       >
+                         {isPlaying ? <><PauseCircle className="w-6 h-6"/> Pause</> : <><PlayCircle className="w-6 h-6"/> Listen to Podcast</>}
                        </button>
-                     )}
+                       {isPlaying && (
+                         <button 
+                           onClick={stopPodcast} 
+                           className="px-6 py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-bold hover:scale-105 transition-all flex items-center gap-3 text-lg"
+                         >
+                           <StopCircle className="w-6 h-6"/> Stop
+                         </button>
+                       )}
+                     </div>
                    </div>
                 </div>
               )}
 
-              {/* NOTES MODE (Previously SUMMARY) */}
+              {/* NOTES MODE */}
               {activeMode === 'notes' && (
-                <div className="w-full text-left space-y-6">
-                   <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
-                     <h2 className="text-2xl font-bold text-brand-text mb-4">Executive Summary</h2>
-                     <p className="text-brand-muted leading-relaxed text-lg whitespace-pre-wrap">{summary}</p>
-                   </div>
+                 <div className="w-full text-left space-y-6">
+                    <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
+                      <ReactMarkdown
+                        components={{
+                          h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                          h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                          h3: ({node, ...props}) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
+                          p: ({node, ...props}) => <p className="text-brand-muted leading-relaxed text-lg mb-4" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-muted text-lg ml-4" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-muted text-lg ml-4" {...props} />,
+                          li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-bold text-brand-primary" {...props} />,
+                          em: ({node, ...props}) => <em className="italic text-brand-text" {...props} />,
+                          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />
+                        }}
+                      >
+                        {summary}
+                      </ReactMarkdown>
+                    </div>
                    {keyPoints.length > 0 && (
                      <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
                        <h2 className="text-2xl font-bold text-brand-text mb-6">Key Concepts</h2>
@@ -858,9 +937,24 @@ export default function StudyMode() {
                            <p className="text-brand-muted text-sm uppercase tracking-widest font-bold">Generated Learning Guide</p>
                         </div>
                      </div>
-                     <p className="text-brand-text leading-relaxed text-lg whitespace-pre-wrap font-medium">
-                        {flashcardSet.tutor_lesson}
-                     </p>
+                     <div className="text-left">
+                        <ReactMarkdown
+                          components={{
+                            h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                            h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                            h3: ({node, ...props}) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
+                            p: ({node, ...props}) => <p className="text-brand-text leading-relaxed text-lg mb-4 font-medium" {...props} />,
+                            ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-text text-lg ml-4" {...props} />,
+                            ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-text text-lg ml-4" {...props} />,
+                            li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                            strong: ({node, ...props}) => <strong className="font-bold text-brand-primary" {...props} />,
+                            em: ({node, ...props}) => <em className="italic opacity-80" {...props} />,
+                            blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />
+                          }}
+                        >
+                          {flashcardSet.tutor_lesson}
+                        </ReactMarkdown>
+                     </div>
                    </div>
                 </div>
               )}

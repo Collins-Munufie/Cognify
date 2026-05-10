@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Upload, Link as LinkIcon, FileText, PlayCircle, ArrowRight, Zap, Target, BookOpen, ChevronDown, CheckCircle2, Star, Sparkles } from 'lucide-react';
+import Logo from './Logo';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ export default function LandingPage() {
   const faqs = [
     {
       q: "What file types are supported?",
-      a: "LearnAID seamlessly parses PDF documents, Word files (.docx), simple text inputs, and even automatically extracts transcripts directly from YouTube URLs."
+      a: "Cognify seamlessly parses PDF documents, Word files (.docx), simple text inputs, and even automatically extracts transcripts directly from YouTube URLs."
     },
     {
       q: "Are the generated flashcards accurate?",
@@ -52,12 +53,7 @@ export default function LandingPage() {
       {/* NAVBAR */}
       <nav className="fixed w-full z-50 top-0 border-b border-brand-border bg-brand-bg/80 backdrop-blur-xl">
          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
-               <div className="p-2.5 bg-brand-primary/20 rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.3)]">
-                 <BrainCircuit className="w-6 h-6 text-brand-primary" />
-               </div>
-               <span className="text-2xl font-bold tracking-tight">Learn<span className="text-brand-primary">AID</span></span>
-            </div>
+            <Logo size="small" />
             
             <div className="flex gap-4">
                <button onClick={() => navigate('/login')} className="px-5 py-2.5 text-brand-muted hover:text-white font-medium transition-colors hidden sm:block">Log In</button>
@@ -233,7 +229,7 @@ export default function LandingPage() {
             <h2 className="text-5xl font-bold mb-6">Stop memorizing. <br/>Start mastering.</h2>
             <p className="text-xl text-brand-muted mb-10">Join thousands of proactive learners breaking the curve today.</p>
             <button onClick={() => navigate('/generate')} className="px-10 py-5 bg-brand-primary text-white rounded-2xl font-bold text-xl hover:scale-105 transition-all shadow-xl shadow-brand-primary/30 flex items-center gap-3 mx-auto">
-               Try LearnAID For Free <ArrowRight className="w-6 h-6" />
+               Try Cognify For Free <ArrowRight className="w-6 h-6" />
             </button>
          </div>
       </section>
@@ -241,10 +237,7 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer className="border-t border-brand-border py-12 px-6 bg-[#0a0a0a]">
          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-               <BrainCircuit className="w-6 h-6 text-brand-primary" />
-               <span className="font-bold text-lg">LearnAID</span>
-            </div>
+            <Logo size="small" showText={false} />
             <p className="text-brand-muted text-sm border border-brand-border px-4 py-2 rounded-full">
                System Architecture &copy; 2026. All rights reserved.
             </p>

@@ -4,6 +4,7 @@ import UploadSection from "./UploadSection";
 import FlashcardList from "./FlashcardList";
 import DocumentInfoPanel from "./DocumentInfoPanel";
 import { BrainCircuit, Save, Loader2, Check, ArrowRight, BookOpen, Layers, Target, FileText, Headphones, Zap, ScrollText } from "lucide-react";
+import Logo from './Logo';
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -195,11 +196,8 @@ export default function Generator() {
         initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
         className="w-full max-w-7xl mx-auto flex flex-col items-center text-center mb-12"
       >
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-brand-primary/20 rounded-2xl glass-panel shadow-[0_0_15px_rgba(139,92,246,0.3)] cursor-pointer" onClick={() => navigate(user ? "/dashboard" : "/")}>
-            <BrainCircuit className="w-8 h-8 text-brand-primary" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Learn<span className="gradient-text-primary">AID</span></h1>
+        <div className="flex items-center gap-4 mb-4">
+          <Logo size="default" />
         </div>
         <p className="text-brand-muted max-w-xl text-lg">Build precisely the study tools you need from your raw materials.</p>
       </motion.header>
@@ -216,7 +214,7 @@ export default function Generator() {
             <motion.div key="select" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="w-full max-w-4xl">
                <div className="glass-panel p-8 rounded-[2rem] border border-brand-border">
                   <h2 className="text-3xl font-bold mb-2">Configure Your Learning Material</h2>
-                  <p className="text-brand-muted mb-8 text-lg">Select exactly which modes LearnAID should generate from your upload. Only chosen formats will be processed.</p>
+                  <p className="text-brand-muted mb-8 text-lg">Select exactly which modes Cognify should generate from your upload. Only chosen formats will be processed.</p>
                   
                   {error && <div className="p-4 mb-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl">{error}</div>}
 
