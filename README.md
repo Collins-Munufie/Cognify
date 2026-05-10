@@ -1,17 +1,19 @@
-# LearnAID 🧠
+# Cognify 🧠
 
-**LearnAID** is a full-stack, AI-powered learning platform designed to transform your raw study materials into highly interactive, comprehensive study modules. By simply uploading a document or providing a URL, LearnAID leverages advanced Large Language Models (via Groq) to instantly generate flashcards, multiple-choice quizzes, written tests, fill-in-the-blank exercises, AI audio podcasts, and personalized tutor lessons.
+**Cognify** (formerly LearnAID) is a full-stack, AI-powered learning platform designed to transform your raw study materials into highly interactive, comprehensive study modules. By simply uploading a document or providing a URL, Cognify leverages advanced Large Language Models (via Groq) to instantly generate structured notes, flashcards, quizzes, written tests, fill-in-the-blank exercises, true/false questions, AI audio podcasts, and personalized tutor lessons.
 
 ---
 
 ## 🚀 Key Features
 
 * **AI-Driven Generation:** Automatically extract context from PDFs, PPTXs, DOCXs, TXTs, or web URLs to construct dynamic study sets.
-* **Modular Study Modes:** Practice exactly how you want. Choose between standard flashcards, strict written evaluations, or casual AI podcasts.
+* **Seven Study Modes:** Practice exactly how you want. Choose between Notes, Quiz, Flashcards, Fill-in-the-Blank, Written Test, True/False, Tutor Lesson, and Podcast.
+* **Intelligent Content Constraints:** Built-in engine enforces strict output quotas (20 MCQs, 20 FIBs, 10 Written, 10 Flashcards) and sophisticated anti-repetition logic for rigorous practice.
+* **Interactive Podcast Narrator:** Turn your study materials into an engaging podcast with customizable voice selections (Conversational, Warm Female, Deep Male, or Default).
+* **Professional Markdown Formatting:** Enjoy beautifully structured, highly readable Notes and Tutor Lessons that simulate real classroom materials using a step-by-step pedagogical approach.
 * **Mastery Tracking & Analytics:** An intelligent dashboard monitors your success rates, study streaks, and flashcard mastery levels (from "Unfamiliar" to "Mastered").
-* **Interactive AI Study Assistant:** Chat directly with an AI contextually aware of your specific uploaded source material.
-* **Secure Authentication:** Features robust JWT-based session management, bcrypt password hashing, and seamless **Google OAuth** integration.
-* **Modern UI/UX:** Built with React, TailwindCSS, and Framer Motion for a stunning, responsive, and glass-morphic visual aesthetic inspired by Brainscape.
+* **Secure Authentication:** Features robust JWT-based session management, bcrypt password hashing, and seamless **Google OAuth** integration with automatic login after registration.
+* **Modern UI/UX:** Built with React, TailwindCSS, and Framer Motion for a stunning, responsive, and glass-morphic visual aesthetic. Includes prominent Floating Action Buttons (FABs) and visual pulse animations for intuitive navigation.
 
 ---
 
@@ -88,7 +90,7 @@ graph TD
 ### 1. Clone the Repository
 ```bash
 git clone <your-repo-url>
-cd LearnAID
+cd Cognify
 ```
 
 ### 2. Backend Setup
@@ -99,7 +101,7 @@ python -m venv venv
 
 # Activate the virtual environment:
 # On Windows:
-.\\venv\\Scripts\\activate
+.\venv\Scripts\activate
 # On Mac/Linux:
 # source venv/bin/activate
 
@@ -141,7 +143,7 @@ npm run dev
 ---
 
 ## 🎨 Design System
-LearnAID utilizes a customized "quantum" and "brand" design system defined in `index.css`. The application extensively uses `brand-primary` (deep vibrant accents), `brand-surface` (glass-morphic panels), and `brand-bg` (dark/navy backdrops) to ensure a high-contrast, premium educational experience.
+Cognify utilizes a custom premium design system defined in `index.css`. The application leverages vibrant accents, glass-morphic panels, and dark/navy backdrops to ensure a high-contrast, visually stunning, and highly engaging learning environment.
 
 ---
 
@@ -151,4 +153,4 @@ LearnAID utilizes a customized "quantum" and "brand" design system defined in `i
 
 ---
 
-*Built with ❤️ for accelerated learning.*
+*Start Mastering. Built with ❤️ for accelerated learning.*
