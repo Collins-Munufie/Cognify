@@ -61,8 +61,11 @@ async def generate_flashcards_endpoint(file: UploadFile = File(...), card_type: 
             raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
         
         # Generate flashcards and extract document info in parallel
-        study_set_data = await generate_flashcards(extracted_text, card_type)
-        document_info = await extract_document_info(extracted_text)
+        import asyncio
+        study_set_data, document_info = await asyncio.gather(
+            generate_flashcards(extracted_text, card_type),
+            extract_document_info(extracted_text)
+        )
         
         study_set_data["document_info"] = document_info
         return study_set_data
@@ -87,8 +90,11 @@ async def generate_from_url_endpoint(req: UrlRequest):
             raise HTTPException(status_code=400, detail="Could not extract text from the provided URL.")
             
         # Generate flashcards and extract document info
-        study_set_data = await generate_flashcards(extracted_text, card_type)
-        document_info = await extract_document_info(extracted_text)
+        import asyncio
+        study_set_data, document_info = await asyncio.gather(
+            generate_flashcards(extracted_text, card_type),
+            extract_document_info(extracted_text)
+        )
         
         study_set_data["document_info"] = document_info
         return study_set_data
@@ -131,8 +137,11 @@ async def extract_url_endpoint(req: UrlRequest):
 @app.post("/api/generate-selected")
 async def generate_selected_endpoint(req: SelectiveGenerationRequest):
     try:
-        study_set_data = await generate_flashcards(req.extracted_text, "Standard", req.modules)
-        document_info = await extract_document_info(req.extracted_text)
+        import asyncio
+        study_set_data, document_info = await asyncio.gather(
+            generate_flashcards(req.extracted_text, "Standard", req.modules),
+            extract_document_info(req.extracted_text)
+        )
         study_set_data["document_info"] = document_info
         study_set_data["raw_content"] = req.extracted_text
         study_set_data["selected_modules"] = req.modules

@@ -30,6 +30,15 @@ class UserStats(Base):
 
     user = relationship("User", back_populates="stats")
 
+class ActivityLog(Base):
+    __tablename__ = "activity_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    date = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    user = relationship("User")
+
 class FlashcardSet(Base):
     __tablename__ = "flashcard_sets"
 
@@ -45,6 +54,7 @@ class FlashcardSet(Base):
     definitions = Column(String, nullable=True) # JSON array
     tutor_lesson = Column(String, nullable=True) # JSON array/text
     raw_content = Column(String, nullable=True) # Raw extracted context
+    podcast_script = Column(String, nullable=True) # Podcast string
     selected_modules = Column(String, nullable=True) # Selected strings
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
