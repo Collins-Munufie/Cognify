@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { BrainCircuit, Loader2, Play, Plus, BookOpen, Download, Database, CheckCircle2, TrendingUp, Compass, Target, Hash, CheckSquare, Layers, Clock, ArrowRight, Trash2, Edit2, UserCircle, Mail, LogOut, X } from 'lucide-react';
+import { BrainCircuit, Loader2, Play, Plus, BookOpen, Download, Database, CheckCircle2, TrendingUp, Compass, Target, Hash, CheckSquare, Layers, Clock, ArrowRight, Trash2, Edit2, UserCircle, Mail, LogOut, X, Settings } from 'lucide-react';
 import Logo from './Logo';
+import EditProfileModal from './EditProfileModal';
 import axios from 'axios';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell } from 'recharts';
 
@@ -15,6 +16,15 @@ export default function Dashboard() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [renameModal, setRenameModal] = useState({ open: false, id: null, title: '' });
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [activityData, setActivityData] = useState([]);
+
+  const fetchActivity = async () => {
+    try {
+      const res = await axios.get('http://127.0.0.1:8000/api/user-stats/activity/weekly');
+      setActivityData(res.data);
+    } catch(e) {}
+  };
 
   // Poll for latest stats on load
   useEffect(() => {
@@ -25,6 +35,7 @@ export default function Dashboard() {
     const bootstrap = async () => {
        await fetchUser();
        await fetchSets();
+       await fetchActivity();
     };
     bootstrap();
   }, [user?.email]); // don't infinitely re-render
@@ -71,26 +82,13 @@ export default function Dashboard() {
     try {
        await axios.put(`http://127.0.0.1:8000/api/flashcard-sets/${set.id}/access`);
     } catch(e) {}
+    try {
+       await axios.put('http://127.0.0.1:8000/api/user-stats/activity');
+    } catch(e) {}
     navigate(`/study/${set.id}`);
   }
 
-  const exportToCSV = (set) => {
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + "Question,Answer\n" 
-      + set.flashcards.map(card => {
-          const q = card.question.replace(/"/g, '""');
-          const a = card.answer.replace(/"/g, '""');
-          return `"${q}","${a}"`;
-      }).join("\n");
-      
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `${set.title.replace(/\s+/g, '_')}_flashcards.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+
 
   // Structured Data Architecture (as requested)
   const dashboardData = useMemo(() => {
@@ -105,16 +103,24 @@ export default function Dashboard() {
       
       const setPercent = set.flashcards.length > 0 ? Math.round((mastered / set.flashcards.length) * 100) : 0;
       
-      // Calculate "type" based on payload
-      let typeLabel = "Mixed Context";
-      if (set.quiz.length === 0 && set.fill_blanks.length === 0) typeLabel = "Flashcards Only";
-      else if (set.flashcards.length === 0) typeLabel = "Assessments";
+      // Calculate generated modes
+      const generatedModes = [];
+      if (set.summary) generatedModes.push("Notes");
+      if (set.flashcards && set.flashcards.length > 0) generatedModes.push("Flashcards");
+      if (set.podcast_script) generatedModes.push("Podcast");
+      if (set.quiz && set.quiz.length > 0) generatedModes.push("Quiz");
+      if (set.fill_blanks && set.fill_blanks.length > 0) generatedModes.push("Fill-Blanks");
+      if (set.short_questions && set.short_questions.length > 0) generatedModes.push("Written");
+      if (set.true_false && set.true_false.length > 0) generatedModes.push("True/False");
+      if (set.tutor_lesson) generatedModes.push("Tutor");
+      if (set.definitions && set.definitions.length > 0) generatedModes.push("Definitions");
+      if (set.raw_content) generatedModes.push("Content");
       
       let lastTime = new Date(set.last_accessed || set.created_at).getTime();
       return {
          ...set,
          progressPercent: setPercent,
-         typeLabel: typeLabel,
+         generatedModes: generatedModes,
          unixTime: lastTime
       }
     }).sort((a,b) => b.unixTime - a.unixTime); // Sort by most recent
@@ -127,32 +133,36 @@ export default function Dashboard() {
     const calculatedMastery = totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0;
 
     return {
-       user: { name: user?.name || user?.email?.split('@')[0] || "User" },
+       user: { 
+         name: user?.user?.name || user?.email?.split('@')[0] || "User",
+         profile_picture: user?.user?.profile_picture || null,
+         email: user?.user?.email || user?.email
+       },
        stats: {
           totalSets: sets.length,
           totalCards: user?.stats?.total_flashcards_studied || 0,
           mastery: calculatedMastery,
           quizAttempts: user?.stats?.quiz_attempts || 0,
-          quizAccuracy: user?.stats?.quizAccuracy || 0
+          quizAccuracy: user?.stats?.quiz_accuracy || 0
        },
        studySets: mappedSets,
        recentSet: mostRecentParsed, // Continue Learning Hook
-       activity: [
-         { name: 'Mon', sessions: 2 },
-         { name: 'Tue', sessions: 5 },
-         { name: 'Wed', sessions: 3 },
-         { name: 'Thu', sessions: 8 },
-         { name: 'Fri', sessions: 4 },
-         { name: 'Sat', sessions: 6 },
-         { name: 'Sun', sessions: 5 },
+       activity: activityData.length > 0 ? activityData : [
+         { name: 'Mon', sessions: 0 },
+         { name: 'Tue', sessions: 0 },
+         { name: 'Wed', sessions: 0 },
+         { name: 'Thu', sessions: 0 },
+         { name: 'Fri', sessions: 0 },
+         { name: 'Sat', sessions: 0 },
+         { name: 'Sun', sessions: 0 },
        ], // Dummy mapping for visual tracking requirements
        performance: {
-         quiz: user?.stats?.quizAccuracy || 0,
-         trueFalse: user?.stats?.trueFalseAccuracy || 0,
-         fillBlank: user?.stats?.fillBlankAccuracy || 0
+         quiz: user?.stats?.quiz_accuracy || 0,
+         trueFalse: user?.stats?.true_false_accuracy || 0,
+         fillBlank: user?.stats?.fill_blank_accuracy || 0
        }
     };
-  }, [sets, user]);
+  }, [sets, user, activityData]);
 
   const filteredSets = dashboardData.studySets;
 
@@ -181,8 +191,12 @@ export default function Dashboard() {
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="hidden md:flex items-center gap-3 cursor-pointer hover:bg-brand-surface p-2 rounded-xl transition-colors border border-transparent hover:border-brand-border"
                >
-                  <div className="w-10 h-10 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold border border-brand-primary/30">
-                     {dashboardData.user.name.charAt(0).toUpperCase()}
+                  <div className="w-10 h-10 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold border border-brand-primary/30 overflow-hidden">
+                     {dashboardData.user.profile_picture ? (
+                        <img src={dashboardData.user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                     ) : (
+                        dashboardData.user.name.charAt(0).toUpperCase()
+                     )}
                   </div>
                   <div className="flex flex-col">
                      <span className="text-sm font-bold">{dashboardData.user.name}</span>
@@ -200,12 +214,16 @@ export default function Dashboard() {
                        className="absolute top-16 right-0 w-72 glass-panel p-6 rounded-3xl border border-brand-border shadow-2xl z-50 flex flex-col gap-4"
                     >
                        <div className="flex items-center gap-4 border-b border-brand-border pb-4">
-                          <div className="w-14 h-14 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-xl shadow-lg">
-                             {dashboardData.user.name.charAt(0).toUpperCase()}
+                          <div className="w-14 h-14 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-xl shadow-lg overflow-hidden shrink-0">
+                             {dashboardData.user.profile_picture ? (
+                                <img src={dashboardData.user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                             ) : (
+                                dashboardData.user.name.charAt(0).toUpperCase()
+                             )}
                           </div>
-                          <div>
-                             <h4 className="font-bold text-lg">{dashboardData.user.name}</h4>
-                             <p className="text-sm text-brand-muted truncate max-w-[150px]">{user?.email}</p>
+                          <div className="overflow-hidden">
+                             <h4 className="font-bold text-lg truncate w-full">{dashboardData.user.name}</h4>
+                             <p className="text-sm text-brand-muted truncate w-full">{dashboardData.user.email}</p>
                           </div>
                        </div>
                        
@@ -216,13 +234,18 @@ export default function Dashboard() {
                           </div>
                           <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-brand-bg border border-brand-border">
                              <span className="text-brand-muted flex items-center gap-2"><Mail className="w-4 h-4"/> Email</span>
-                             <span className="font-bold truncate max-w-[100px]">{user?.email}</span>
+                             <span className="font-bold truncate max-w-[100px]">{dashboardData.user.email}</span>
                           </div>
                        </div>
                        
-                       <button onClick={handleLogout} className="mt-2 w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-bold transition-colors flex justify-center items-center gap-2">
-                          <LogOut className="w-4 h-4" /> Sign Out
-                       </button>
+                       <div className="flex gap-2 mt-2">
+                          <button onClick={() => { setEditProfileOpen(true); setProfileOpen(false); }} className="flex-1 py-3 bg-brand-bg hover:bg-brand-surface border border-brand-border rounded-xl font-bold transition-colors flex justify-center items-center gap-2 text-sm">
+                             <Settings className="w-4 h-4" /> Profile
+                          </button>
+                          <button onClick={handleLogout} className="flex-1 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-bold transition-colors flex justify-center items-center gap-2 text-sm">
+                             <LogOut className="w-4 h-4" /> Logout
+                          </button>
+                       </div>
                     </motion.div>
                   </>
                )}
@@ -283,7 +306,14 @@ export default function Dashboard() {
                   <div className="flex-1 z-10 w-full">
                      <div className="flex items-center gap-3 mb-3">
                         <span className="px-3 py-1 bg-brand-bg rounded-lg text-xs font-bold text-brand-muted border border-brand-border uppercase tracking-wide">Last Accessed: {new Date(dashboardData.recentSet.unixTime).toLocaleDateString()}</span>
-                        <span className="px-3 py-1 bg-brand-primary/20 rounded-lg text-xs font-bold text-brand-primary border border-brand-primary/30">{dashboardData.recentSet.typeLabel}</span>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {dashboardData.recentSet.generatedModes.slice(0, 3).map(mode => (
+                             <span key={mode} className="px-3 py-1 bg-brand-primary/20 rounded-lg text-[10px] font-bold text-brand-primary border border-brand-primary/30 uppercase tracking-wider">{mode}</span>
+                          ))}
+                          {dashboardData.recentSet.generatedModes.length > 3 && (
+                             <span className="px-3 py-1 bg-brand-primary/20 rounded-lg text-[10px] font-bold text-brand-primary border border-brand-primary/30 uppercase tracking-wider">+{dashboardData.recentSet.generatedModes.length - 3} MORE</span>
+                          )}
+                        </div>
                      </div>
                      <h2 className="text-3xl md:text-4xl font-bold mb-4">{dashboardData.recentSet.title}</h2>
                      
@@ -382,20 +412,17 @@ export default function Dashboard() {
                   >
                      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
                         {deleteConfirmId === set.id ? (
-                           <div className="flex items-center gap-2 bg-brand-surface p-1 rounded-lg border border-red-500/50 shadow-lg pr-3">
-                              <button onClick={() => setDeleteConfirmId(null)} className="p-1 text-brand-muted hover:text-white"><X className="w-4 h-4"/></button>
-                              <span className="text-xs font-bold text-red-500">Delete?</span>
-                              <button onClick={() => handleDeleteSet(set.id)} className="p-1 flex items-center justify-center bg-red-500 text-white rounded-md"><CheckCircle2 className="w-4 h-4"/></button>
+                           <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-1.5 rounded-xl border border-red-500/20 backdrop-blur-md shadow-sm">
+                              <span className="text-xs font-bold text-red-400 px-1">Sure?</span>
+                              <button onClick={() => handleDeleteSet(set.id)} className="p-1.5 text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"><CheckCircle2 className="w-3.5 h-3.5"/></button>
+                              <button onClick={() => setDeleteConfirmId(null)} className="p-1.5 text-brand-muted hover:text-brand-text bg-brand-surface rounded-md transition-colors"><X className="w-3.5 h-3.5"/></button>
                            </div>
                         ) : (
                            <>
-                              <button onClick={() => setRenameModal({ open: true, id: set.id, title: set.title })} className="p-2 bg-brand-bg rounded-lg text-brand-muted hover:text-brand-primary transition-colors border border-brand-border shadow-md" title="Rename Set">
+                              <button onClick={() => setRenameModal({ open: true, id: set.id, title: set.title })} className="p-2.5 bg-brand-surface rounded-xl text-brand-muted hover:text-brand-primary transition-all border border-transparent hover:border-brand-primary/20 shadow-sm" title="Rename Set">
                                  <Edit2 className="w-4 h-4"/>
                               </button>
-                              <button onClick={() => exportToCSV(set)} className="p-2 bg-brand-bg rounded-lg text-brand-muted hover:text-brand-primary transition-colors border border-brand-border shadow-md" title="Export CSV">
-                                 <Download className="w-4 h-4"/>
-                              </button>
-                              <button onClick={() => setDeleteConfirmId(set.id)} className="p-2 bg-brand-bg rounded-lg text-brand-muted hover:text-red-500 transition-colors border border-brand-border shadow-md" title="Delete Set">
+                              <button onClick={() => setDeleteConfirmId(set.id)} className="p-2.5 bg-brand-surface rounded-xl text-brand-muted hover:bg-red-500/10 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20 shadow-sm" title="Delete Set">
                                  <Trash2 className="w-4 h-4"/>
                               </button>
                            </>
@@ -403,8 +430,16 @@ export default function Dashboard() {
                      </div>
 
                      <div className="flex items-center gap-2 mb-3">
-                        <span className="px-2.5 py-1 bg-brand-surface rounded-md border border-brand-border text-xs font-bold text-brand-muted"><Clock className="w-3 h-3 inline mr-1"/> {new Date(set.unixTime).toLocaleDateString()}</span>
-                        <span className="px-2.5 py-1 bg-brand-primary/10 rounded-md border border-brand-primary/30 text-xs font-bold text-brand-primary">{set.typeLabel}</span>
+                        <span className="px-2.5 py-1 bg-brand-surface rounded-md border border-brand-border text-[10px] font-bold uppercase tracking-wider text-brand-muted"><Clock className="w-3 h-3 inline mr-1"/> {new Date(set.unixTime).toLocaleDateString()}</span>
+                     </div>
+                     
+                     <div className="flex flex-wrap gap-1.5 mb-4">
+                        {set.generatedModes.slice(0, 4).map(mode => (
+                           <span key={mode} className="px-2 py-0.5 bg-brand-primary/10 rounded border border-brand-primary/20 text-[9px] font-bold uppercase tracking-wider text-brand-primary">{mode}</span>
+                        ))}
+                        {set.generatedModes.length > 4 && (
+                           <span className="px-2 py-0.5 bg-brand-primary/10 rounded border border-brand-primary/20 text-[9px] font-bold uppercase tracking-wider text-brand-primary">+{set.generatedModes.length - 4}</span>
+                        )}
                      </div>
 
                      <h3 className="text-xl font-bold mb-4 line-clamp-2 text-brand-text pr-8">{set.title}</h3>
@@ -460,6 +495,11 @@ export default function Dashboard() {
                <button onClick={handleRenameSet} className="w-full py-4 bg-brand-primary text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-lg">Save Changes</button>
             </motion.div>
          </div>
+      )}
+
+      {/* EDIT PROFILE MODAL */}
+      {editProfileOpen && (
+         <EditProfileModal onClose={() => setEditProfileOpen(false)} />
       )}
 
     </div>

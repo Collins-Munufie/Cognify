@@ -1,18 +1,67 @@
 @import "tailwindcss";
 
+:root {
+  --brand-bg: #F8FAFC;
+  --brand-surface: #FFFFFF;
+  --brand-border: #E5E7EB;
+  --brand-text: #333333;
+  --brand-muted: #666666;
+  
+  /* Constant colors across themes */
+  --brand-primary: #FF8243;
+  --brand-primary-hover: #E66A2B;
+  --brand-secondary: #28A5DC;
+  --brand-secondary-hover: #1D8ABF;
+  --brand-hero: #0B1A2A;
+}
+
+.dark {
+  --brand-bg: #0B0F19; 
+  --brand-surface: #111827; 
+  --brand-border: #1F2937; 
+  --brand-text: #F9FAFB; 
+  --brand-muted: #9CA3AF; 
+}
+
 @theme {
-  --color-brand-bg: #F8FAFC;
-  --color-brand-surface: #FFFFFF;
-  --color-brand-border: #E5E7EB;
-  --color-brand-primary: #FF8243;
-  --color-brand-primary-hover: #E66A2B;
-  --color-brand-secondary: #28A5DC;
-  --color-brand-secondary-hover: #1D8ABF;
-  --color-brand-hero: #0B1A2A;
-  --color-brand-text: #333333;
-  --color-brand-muted: #666666;
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-border: var(--brand-border);
+  --color-brand-text: var(--brand-text);
+  --color-brand-muted: var(--brand-muted);
+  
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-brand-secondary-hover: var(--brand-secondary-hover);
+  --color-brand-hero: var(--brand-hero);
   
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+@layer utilities {
+  .dark .glass-panel {
+    box-shadow: none !important;
+    border-color: var(--brand-border) !important;
+  }
+  
+  /* Strip heavy shadows in dark mode without breaking focus rings */
+  .dark .shadow-sm,
+  .dark .shadow-md,
+  .dark .shadow-lg,
+  .dark .shadow-xl,
+  .dark .shadow-2xl,
+  .dark [class*="shadow-["] {
+    --tw-shadow: 0 0 #0000 !important;
+    --tw-shadow-colored: 0 0 #0000 !important;
+  }
+
+  /* Tone down ambient glowing blurs for a lightweight modern feel */
+  .dark .blur-\[120px\],
+  .dark .blur-\[100px\],
+  .dark .blur-3xl {
+    opacity: 0.05 !important;
+  }
 }
 
 body {

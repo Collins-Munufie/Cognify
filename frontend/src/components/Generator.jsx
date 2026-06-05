@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import UploadSection from "./UploadSection";
 import FlashcardList from "./FlashcardList";
 import DocumentInfoPanel from "./DocumentInfoPanel";
-import { BrainCircuit, Save, Loader2, Check, ArrowRight, BookOpen, Layers, Target, FileText, Headphones, Zap, ScrollText } from "lucide-react";
+import { BrainCircuit, Save, Loader2, Check, ArrowRight, BookOpen, Layers, Target, FileText, Headphones, Zap, ScrollText, CheckCircle2 } from "lucide-react";
 import Logo from './Logo';
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
@@ -22,11 +22,15 @@ export default function Generator() {
     { id: "Podcast", icon: <Headphones />, label: "Podcast" },
     { id: "Fill-in-the-Blank", icon: <ScrollText />, label: "Fill-in-the-Blank" },
     { id: "Written Test", icon: <BookOpen />, label: "Written Test" },
+    { id: "True/False", icon: <CheckCircle2 />, label: "True/False" },
     { id: "Tutor Lesson", icon: <BrainCircuit />, label: "Tutor Lesson" },
     { id: "Content", icon: <Zap />, label: "Content" }
   ];
   
-  const [selectedModules, setSelectedModules] = useState(["Notes", "Multiple Choice (Quiz)", "Flashcards", "Content"]);
+  const [selectedModules, setSelectedModules] = useState([
+    "Notes", "Multiple Choice (Quiz)", "Flashcards", "Podcast",
+    "Fill-in-the-Blank", "Written Test", "True/False", "Tutor Lesson", "Content"
+  ]);
 
   const [flashcards, setFlashcards] = useState([]);
   const [completeStudySet, setCompleteStudySet] = useState(null);
@@ -51,13 +55,17 @@ export default function Generator() {
 
     try {
       const response = await axios.post("http://127.0.0.1:8000/api/extract-document", formData);
-      setExtractedData(response.data.extracted_text);
-      setSetTitle(response.data.title);
+      const extractedText = response.data.extracted_text;
+      const title = response.data.title;
+      setExtractedData(extractedText);
+      setSetTitle(title || "Untitled Set");
+      
       setPhase(2);
+      setIsGenerating(false);
+      
     } catch (err) {
       console.error("Extraction error:", err);
-      setError(err.response?.data?.detail || "An error occurred while extracting the document.");
-    } finally {
+      setError(err.response?.data?.detail || "An error occurred while processing the document.");
       setIsGenerating(false);
     }
   };
@@ -68,19 +76,25 @@ export default function Generator() {
 
     try {
       const response = await axios.post("http://127.0.0.1:8000/api/extract-url", { url, card_type: "Standard Q&A" });
-      setExtractedData(response.data.extracted_text);
+      const extractedText = response.data.extracted_text;
       
+      let title = "Web Link Set";
       try {
         const domain = new URL(url).hostname.replace("www.", "");
-        setSetTitle(`${domain} Study Material`);
+        title = `${domain} Study Material`;
       } catch (e) {
-        setSetTitle("Web Link Set");
+        title = "Web Link Set";
       }
+      
+      setExtractedData(extractedText);
+      setSetTitle(title);
+      
       setPhase(2);
+      setIsGenerating(false);
+      
     } catch (err) {
       console.error("Extraction error:", err);
-      setError(err.response?.data?.detail || "An error occurred while extracting from URL.");
-    } finally {
+      setError(err.response?.data?.detail || "An error occurred while processing the URL.");
       setIsGenerating(false);
     }
   };
@@ -115,6 +129,7 @@ export default function Generator() {
         true_false: payloadData.true_false || [],
         definitions: payloadData.definitions || [],
         tutor_lesson: payloadData.tutor_lesson || "",
+        podcast_script: payloadData.podcast_script || "",
         raw_content: payloadData.raw_content || "",
         selected_modules: selectedModules
       };

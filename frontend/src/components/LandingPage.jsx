@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Upload, Link as LinkIcon, FileText, PlayCircle, ArrowRight, Zap, Target, BookOpen, ChevronDown, CheckCircle2, Star, Sparkles } from 'lucide-react';
 import Logo from './Logo';
+import ThemeToggle from './ThemeToggle';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -55,8 +56,9 @@ export default function LandingPage() {
          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <Logo size="small" />
             
-            <div className="flex gap-4">
-               <button onClick={() => navigate('/login')} className="px-5 py-2.5 text-brand-muted hover:text-white font-medium transition-colors hidden sm:block">Log In</button>
+            <div className="flex items-center gap-4">
+               <ThemeToggle />
+               <button onClick={() => navigate('/login')} className="px-5 py-2.5 text-brand-muted hover:text-brand-text font-medium transition-colors hidden sm:block">Log In</button>
                <button onClick={() => navigate('/login')} className="px-6 py-2.5 bg-brand-text text-brand-bg hover:bg-brand-primary hover:text-white rounded-xl font-bold transition-all shadow-lg hover:scale-105">Get Started</button>
             </div>
          </div>
@@ -68,9 +70,7 @@ export default function LandingPage() {
         
         <div className="max-w-5xl mx-auto text-center relative z-10">
            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-brand-primary/30 bg-brand-primary/10 text-brand-primary font-medium text-sm mb-8 shadow-[0_0_20px_rgba(139,92,246,0.15)] transform hover:scale-105 transition-transform cursor-pointer" onClick={() => navigate('/generate')}>
-                 <Sparkles className="w-4 h-4"/> Unleash AI-Powered Studying
-              </div>
+              
               
               <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight">
                  Master Your Studies <span className="text-brand-primary block mt-2">Faster with AI.</span>
@@ -235,9 +235,9 @@ export default function LandingPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="border-t border-brand-border py-12 px-6 bg-[#0a0a0a]">
+      <footer className="border-t border-brand-border py-12 px-6 bg-brand-bg">
          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-            <Logo size="small" showText={false} />
+            <Logo size="small" />
             <p className="text-brand-muted text-sm border border-brand-border px-4 py-2 rounded-full">
                System Architecture &copy; 2026. All rights reserved.
             </p>

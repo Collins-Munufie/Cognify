@@ -68,7 +68,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
         <button
           onClick={() => setActiveTab('pdf')}
           className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            activeTab === 'pdf' ? 'bg-brand-primary text-white shadow-lg' : 'text-brand-muted hover:text-white'
+            activeTab === 'pdf' ? 'bg-brand-primary text-white shadow-lg' : 'text-brand-muted hover:bg-brand-border/50 hover:text-brand-text'
           }`}
         >
           Upload Document
@@ -76,7 +76,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
         <button
           onClick={() => setActiveTab('url')}
           className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            activeTab === 'url' ? 'bg-brand-primary text-white shadow-lg' : 'text-brand-muted hover:text-white'
+            activeTab === 'url' ? 'bg-brand-primary text-white shadow-lg' : 'text-brand-muted hover:bg-brand-border/50 hover:text-brand-text'
           }`}
         >
           Web / YouTube Link
@@ -117,7 +117,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
                   </div>
                   <h3 className="text-xl font-medium mb-2">Drag & Drop your Document</h3>
                   <p className="text-brand-muted mb-6">Supports PDF, DOCX, PPTX, TXT</p>
-                  <div className="px-6 py-2.5 rounded-full bg-brand-surface border border-brand-border text-sm font-medium hover:bg-brand-primary/10 transition-colors pointer-events-auto">
+                  <div className="px-8 py-3 rounded-full bg-brand-primary text-white text-sm font-semibold hover:bg-brand-primary-hover shadow-md transition-all pointer-events-auto">
                     Select Document
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
                     placeholder="https://en.wikipedia.org/wiki/Quantum_mechanics"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
-                    className="block w-full pl-11 pr-4 py-4 bg-brand-bg border border-brand-border rounded-xl focus:ring-2 focus:ring-brand-primary/50 focus:border-brand-primary text-brand-text placeholder-brand-border outline-none transition-all"
+                    className="block w-full pl-11 pr-4 py-4 bg-white border-2 border-brand-border rounded-xl shadow-sm focus:ring-4 focus:ring-brand-primary/20 focus:border-brand-primary text-brand-text placeholder-brand-muted outline-none transition-all"
                   />
                 </div>
               </div>

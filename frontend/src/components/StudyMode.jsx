@@ -347,6 +347,11 @@ export default function StudyMode() {
                <BookOpen className="w-5 h-5 shrink-0" /> <span>Written Test</span>
              </button>
            )}
+           {trueFalseList.length > 0 && (
+             <button onClick={() => setActiveMode('true_false')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-left ${activeMode === 'true_false' ? 'bg-brand-primary/10 text-brand-primary font-bold shadow-sm border border-brand-primary/20' : 'text-brand-muted hover:bg-black/5'}`}>
+               <CheckCircle2 className="w-5 h-5 shrink-0" /> <span>True / False</span>
+             </button>
+           )}
            {flashcardSet?.tutor_lesson && (
              <button onClick={() => setActiveMode('tutor_lesson')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-left ${activeMode === 'tutor_lesson' ? 'bg-brand-primary/10 text-brand-primary font-bold shadow-sm border border-brand-primary/20' : 'text-brand-muted hover:bg-black/5'}`}>
                <BrainCircuit className="w-5 h-5 shrink-0" /> <span>Tutor Lesson</span>
