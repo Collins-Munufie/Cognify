@@ -70,14 +70,12 @@ async def extract_document_info(text: str):
             
             # Clean up JSON if wrapped in markdown
             clean_content = result_content.strip()
-            if clean_content.startswith("```json"):
-                clean_content = clean_content[7:]
-            if clean_content.startswith("```"):
-                clean_content = clean_content[3:]
-            if clean_content.endswith("```"):
-                clean_content = clean_content[:-3]
+            start_idx = clean_content.find('{')
+            end_idx = clean_content.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                clean_content = clean_content[start_idx:end_idx+1]
                 
-            data = json.loads(clean_content.strip())
+            data = json.loads(clean_content)
             logger.info(f"Successfully extracted document info")
             return data
             

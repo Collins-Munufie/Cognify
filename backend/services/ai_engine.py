@@ -23,22 +23,12 @@ client = AsyncOpenAI(
 # Simple in-memory cache to prevent duplicate requests
 TEXT_CACHE = {}
 
-async def generate_flashcards(text: str, card_type: str = "Standard", selected_modules: list = None):
-    """
-    Calls Groq API to generate a complete study set from text.
-    Implements caching to reduce identical calls.
-    """
-    # 1. Caching logic
-    text_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
-    if text_hash in TEXT_CACHE:
-        logger.info("Serving generated study set from memory CACHE.")
-        return TEXT_CACHE[text_hash]
+import asyncio
 
-    logger.info(f"Generating flashcards with card_type: {card_type}, text length: {len(text)}")
-    
-    # Dynamically build the required JSON output based on selective processing
-    modules = selected_modules or ["Notes", "Quiz", "Flashcards", "Fill-in-the-Blank", "Written Test", "True/False", "Tutor Lesson", "Podcast"]
-    
+async def _generate_module_group(text: str, modules: list) -> dict:
+    if not modules:
+        return {}
+        
     json_structure = "{\n"
     if "Notes" in modules:
         json_structure += '      "summary": "High-quality PowerPoint-style study notes formatted in Markdown. Use slide headings (## Slide X: Title) and bullet points. Must cover EVERYTHING from the material clearly.",\n'
@@ -67,15 +57,6 @@ You are Cognify, an intelligent AI study assistant.
 Your task is to transform the provided text into a complete, structured, high-quality learning module.
 
 ----------------------------------------
-CRITICAL QUANTITY REQUIREMENTS
-----------------------------------------
-- ALWAYS generate EXACTLY 20 MCQs (`quiz`)
-- ALWAYS generate EXACTLY 25 Fill-in-the-Blanks (`fill_blanks`) to ensure enough unique answers can be filtered
-- ALWAYS generate EXACTLY 10 Written Questions (`short_questions`)
-- ALWAYS generate EXACTLY 10 Flashcards (`flashcards`)
-- If text is too short, reduce intelligently without repetition or hallucination
-
-----------------------------------------
 GLOBAL ANTI-REPETITION RULE (VERY IMPORTANT)
 ----------------------------------------
 - Do NOT repeat concepts across sections
@@ -83,22 +64,37 @@ GLOBAL ANTI-REPETITION RULE (VERY IMPORTANT)
 - Avoid semantic duplication (same idea reworded)
 - If duplication occurs, internally regenerate before output
 
-----------------------------------------
+"""
+
+    if any(m in modules for m in ["Multiple Choice (Quiz)", "Quiz", "Fill-in-the-Blank", "Written Test", "Flashcards"]):
+        prompt += "----------------------------------------\n"
+        prompt += "CRITICAL QUANTITY REQUIREMENTS\n"
+        prompt += "----------------------------------------\n"
+        if "Multiple Choice (Quiz)" in modules or "Quiz" in modules:
+            prompt += "- ALWAYS generate EXACTLY 15 MCQs (`quiz`)\n"
+        if "Fill-in-the-Blank" in modules:
+            prompt += "- ALWAYS generate EXACTLY 20 Fill-in-the-Blanks (`fill_blanks`) to ensure enough unique answers can be filtered\n"
+        if "Written Test" in modules:
+            prompt += "- ALWAYS generate EXACTLY 10 Written Questions (`short_questions`)\n"
+        if "Flashcards" in modules:
+            prompt += "- ALWAYS generate EXACTLY 10 Flashcards (`flashcards`)\n"
+        prompt += "- If text is too short, reduce intelligently without repetition or hallucination\n\n"
+
+    if "Fill-in-the-Blank" in modules:
+        prompt += """----------------------------------------
 FILL-IN-THE-BLANK RULES
 ----------------------------------------
 - MUST be intelligent, diverse, clean, and non-repetitive
 - NEVER repeat any answer (`blank_word` must be unique)
 - Avoid repeated phrases, lines, or consecutive words
-- Extract from:
-  * key concepts
-  * definitions
-  * names
-  * steps
-  * important terms
+- Extract from key concepts, definitions, names, steps, and important terms
 - Do NOT blank random words
 - Maintain sentence meaning and clarity
 
-----------------------------------------
+"""
+
+    if "Notes" in modules:
+        prompt += """----------------------------------------
 NOTES GENERATION (POWERPOINT STYLE)
 ----------------------------------------
 Your task is to convert the provided material into high-quality PowerPoint-style study notes that are easy to learn, structured, and concept-focused. The "summary" JSON field MUST follow EXACTLY this format:
@@ -157,7 +153,10 @@ QUALITY RULES:
 - Content must strictly match the material
 - Output must be clean and well-structured
 
-----------------------------------------
+"""
+
+    if "Podcast" in modules:
+        prompt += """----------------------------------------
 PODCAST SCRIPT GENERATION
 ----------------------------------------
 Turn the provided material into a highly engaging, human-like educational podcast transcript.
@@ -178,8 +177,11 @@ Engagement Mode:
 - Add curiosity hooks and transitions to keep the listener interested
 - Output the entire script as a single continuous text string in the `podcast_script` JSON field.
 
-----------------------------------------
-TUTOR LESSON SECTION (STRICT STRUCTURE)
+"""
+
+    if "Tutor Lesson" in modules:
+        prompt += """----------------------------------------
+Tutor Lesson SECTION (STRICT STRUCTURE)
 ----------------------------------------
 The "tutor_lesson" MUST follow EXACTLY this format:
 
@@ -198,7 +200,9 @@ The "tutor_lesson" MUST follow EXACTLY this format:
 - Keep language simple and clear.
 - Make lessons interactive and easy to study.
 
-----------------------------------------
+"""
+
+    prompt += f"""----------------------------------------
 GENERAL QUALITY RULES
 ----------------------------------------
 - Content MUST match the provided text strictly.
@@ -229,7 +233,7 @@ TEXT
     
     for model_name in models_to_try:
         try:
-            logger.info(f"Calling Groq API with model: {model_name}...")
+            logger.info(f"Calling Groq API with model: {model_name} for modules: {modules}")
             # Only use response_format for models that definitely support it to prevent API errors
             api_kwargs = {
                 "model": model_name,
@@ -238,25 +242,24 @@ TEXT
                     {"role": "user", "content": prompt}
                 ],
                 "temperature": 0.7,
-                "max_tokens": 4000
+                "max_tokens": 8000
             }
             if "llama-3" in model_name or "mixtral" in model_name:
                 api_kwargs["response_format"] = {"type": "json_object"}
                 
             response = await client.chat.completions.create(**api_kwargs)
             
-            logger.info(f"Groq API response received with model {model_name}: {response.choices[0].message.content[:100]}...")
+            logger.info(f"Groq API response received with model {model_name} for {modules}")
             result_content = response.choices[0].message.content
             
             clean_content = result_content.strip()
-            if clean_content.startswith("```json"):
-                clean_content = clean_content[7:]
-            if clean_content.startswith("```"):
-                clean_content = clean_content[3:]
-            if clean_content.endswith("```"):
-                clean_content = clean_content[:-3]
+            # Robust JSON extraction
+            start_idx = clean_content.find('{')
+            end_idx = clean_content.rfind('}')
+            if start_idx != -1 and end_idx != -1:
+                clean_content = clean_content[start_idx:end_idx+1]
                 
-            data = json.loads(clean_content.strip())
+            data = json.loads(clean_content)
             
             # Programmatic Deduplication for Fill-in-the-Blanks
             import re
@@ -274,19 +277,77 @@ TEXT
                         fb["sentence"] = sentence
                         
                         unique_blanks.append(fb)
-                data["fill_blanks"] = unique_blanks[:20]  # Cap at exactly 20 unique blanks
+                data["fill_blanks"] = unique_blanks[:15]  # Cap at exactly 15 unique blanks
             
-            TEXT_CACHE[text_hash] = data
-            
-            logger.info(f"Successfully generated study set (flashcards, quiz, summary) with model {model_name}")
+            logger.info(f"Successfully generated study modules {modules} with model {model_name}")
             return data
             
         except Exception as model_error:
             logger.warning(f"Model {model_name} failed: {str(model_error)}")
             continue
     
-    logger.error(f"All Groq models failed. Last error will be reported.")
-    raise Exception(f"Failed to generate flashcards with Groq API. Please check your API key and try again.")
+    logger.error(f"All Groq models failed. Group {modules} will be skipped.")
+    return {}
+
+async def generate_flashcards(text: str, card_type: str = "Standard", selected_modules: list = None):
+    """
+    Calls Groq API to generate a complete study set from text.
+    Implements caching and parallel group execution to prevent LLM truncation.
+    """
+    # 1. Caching logic
+    text_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
+    modules = selected_modules or ["Notes", "Quiz", "Flashcards", "Fill-in-the-Blank", "Written Test", "True/False", "Tutor Lesson", "Podcast"]
+    
+    module_key = "-".join(sorted(modules))
+    cache_key = f"{text_hash}_{card_type}_{module_key}"
+    if cache_key in TEXT_CACHE:
+        logger.info("Serving generated study set from memory CACHE.")
+        return TEXT_CACHE[cache_key]
+
+    logger.info(f"Generating flashcards with card_type: {card_type}, text length: {len(text)}")
+    
+    # 2. Group the modules into Q&A vs Long-form to avoid hitting the 8000 token limit of a single call
+    modules = selected_modules or ["Notes", "Quiz", "Flashcards", "Fill-in-the-Blank", "Written Test", "True/False", "Tutor Lesson", "Podcast"]
+    
+    group_a = [] # MCQs, Flashcards, True/False
+    group_b = [] # Fill-in-the-Blanks, Written Test
+    long_form_groups = [] # Notes, Tutor Lesson, Podcast
+    
+    for m in modules:
+        if m in ["Notes", "Tutor Lesson", "Podcast"]:
+            long_form_groups.append([m])
+        elif m in ["Fill-in-the-Blank", "Written Test"]:
+            group_b.append(m)
+        else:
+            group_a.append(m)
+            
+    # Execute all group generations concurrently
+    tasks = []
+    if group_a:
+        tasks.append(_generate_module_group(text, group_a))
+    if group_b:
+        tasks.append(_generate_module_group(text, group_b))
+    for g in long_form_groups:
+        tasks.append(_generate_module_group(text, g))
+        
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    # 3. Merge outputs
+    final_data = {}
+    for res in results:
+        if isinstance(res, dict):
+            final_data.update(res)
+        else:
+            logger.error(f"Module generation group failed with error: {res}")
+        
+    # Ensure definitions list exists so frontend doesn't crash if it was entirely omitted
+    if "definitions" not in final_data:
+        final_data["definitions"] = []
+            
+    TEXT_CACHE[cache_key] = final_data
+    
+    logger.info(f"Successfully merged study modules.")
+    return final_data
 
 async def chat_with_ai(messages: list, context_text: str):
     """
