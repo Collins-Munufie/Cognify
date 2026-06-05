@@ -26,6 +26,7 @@ class FlashcardSetCreate(BaseModel):
     true_false: List[dict] = []
     definitions: List[dict] = []
     tutor_lesson: str = ""
+    podcast_script: str = ""
     raw_content: str = ""
     selected_modules: List[str] = []
 
@@ -50,6 +51,7 @@ def save_flashcard_set(
         true_false=json.dumps(set_data.true_false),
         definitions=json.dumps(set_data.definitions),
         tutor_lesson=set_data.tutor_lesson,
+        podcast_script=set_data.podcast_script,
         raw_content=set_data.raw_content,
         selected_modules=json.dumps(set_data.selected_modules)
     )
@@ -98,6 +100,7 @@ def get_user_flashcard_sets(
             "true_false": json.loads(s.true_false) if s.true_false else [],
             "definitions": json.loads(s.definitions) if s.definitions else [],
             "tutor_lesson": s.tutor_lesson if s.tutor_lesson else None,
+            "podcast_script": s.podcast_script if s.podcast_script else None,
             "raw_content": s.raw_content if s.raw_content else "",
             "selected_modules": json.loads(s.selected_modules) if s.selected_modules else [],
             "created_at": s.created_at,

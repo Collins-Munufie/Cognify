@@ -59,3 +59,51 @@ def increment_cards_studied(db: Session = Depends(get_db), current_user: models.
         
     db.commit()
     return {"message": "Flashcards studied incremented", "total": user_stats.total_flashcards_studied}
+
+import datetime
+from sqlalchemy import func
+
+@router.put("/activity")
+def log_activity(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    activity = models.ActivityLog(user_id=current_user.id, date=datetime.datetime.utcnow())
+    db.add(activity)
+    db.commit()
+    return {"message": "Activity logged"}
+
+@router.get("/activity/weekly")
+def get_weekly_activity(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    today = datetime.datetime.utcnow().date()
+    start_date = today - datetime.timedelta(days=6)
+    
+    # Get all logs for last 7 days
+    logs = db.query(models.ActivityLog).filter(
+        models.ActivityLog.user_id == current_user.id,
+        func.date(models.ActivityLog.date) >= start_date
+    ).all()
+    
+    # Initialize the week with 0 sessions
+    days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    activity_map = {}
+    for i in range(7):
+        d = start_date + datetime.timedelta(days=i)
+        day_name = days[d.weekday()]
+        activity_map[day_name] = 0
+        
+    for log in logs:
+        day_name = days[log.date.weekday()]
+        if day_name in activity_map:
+            activity_map[day_name] += 1
+            
+    # Return as an array of objects for Recharts
+    # Recharts expects the array to be in order. We can just sort by Mon-Sun, but actually it's better to sort chronologically.
+    # However, Recharts usually displays them in array order. So let's build chronologically:
+    result = []
+    for i in range(7):
+        d = start_date + datetime.timedelta(days=i)
+        day_name = days[d.weekday()]
+        result.append({
+            "name": day_name,
+            "sessions": activity_map[day_name]
+        })
+        
+    return result

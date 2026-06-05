@@ -13,7 +13,7 @@ from google.auth.transport import requests
 import secrets
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 from database import get_db
 import models
@@ -125,9 +125,41 @@ def read_users_me(current_user: models.User = Depends(get_current_user)):
     stats = current_user.stats
     return {
         "user": {
-            "name": current_user.email.split('@')[0],
+            "name": current_user.full_name or current_user.email.split('@')[0],
             "email": current_user.email,
-            "id": current_user.id
+            "id": current_user.id,
+            "profile_picture": current_user.profile_picture
+        },
+        "stats": {
+            "quiz_attempts": stats.quiz_attempts if stats else 0,
+            "quizAccuracy": stats.quiz_accuracy if stats else 0,
+            "trueFalseAccuracy": stats.true_false_accuracy if stats else 0,
+            "fillBlankAccuracy": stats.fill_blank_accuracy if stats else 0,
+            "total_flashcards_studied": stats.total_flashcards_studied if stats else 0,
+        }
+    }
+
+class ProfileUpdate(BaseModel):
+    full_name: Optional[str] = None
+    profile_picture: Optional[str] = None
+
+@router.put("/me")
+def update_users_me(profile_data: ProfileUpdate, current_user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if profile_data.full_name is not None:
+        current_user.full_name = profile_data.full_name
+    if profile_data.profile_picture is not None:
+        current_user.profile_picture = profile_data.profile_picture
+        
+    db.commit()
+    db.refresh(current_user)
+    
+    stats = current_user.stats
+    return {
+        "user": {
+            "name": current_user.full_name or current_user.email.split('@')[0],
+            "email": current_user.email,
+            "id": current_user.id,
+            "profile_picture": current_user.profile_picture
         },
         "stats": {
             "quiz_attempts": stats.quiz_attempts if stats else 0,
