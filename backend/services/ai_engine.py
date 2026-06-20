@@ -11,14 +11,66 @@ load_dotenv()
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Initialize Groq API client using OpenAI SDK compatibility layer
-api_key = os.getenv("GROQ_API_KEY")
-logger.info(f"GROQ_API_KEY loaded: {'Yes' if api_key else 'No API Key'}")
+# Initialize API clients
+clients = {}
 
-client = AsyncOpenAI(
-    api_key=api_key,
-    base_url="https://api.groq.com/openai/v1"
-)
+# 1. Groq (Primary)
+groq_api_key = os.getenv("GROQ_API_KEY")
+if groq_api_key:
+    clients["groq"] = AsyncOpenAI(api_key=groq_api_key, base_url="https://api.groq.com/openai/v1")
+    logger.info("Groq API initialized.")
+else:
+    logger.warning("GROQ_API_KEY not found.")
+
+# 2. Gemini (Secondary)
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+if gemini_api_key:
+    clients["gemini"] = AsyncOpenAI(api_key=gemini_api_key, base_url="https://generativelanguage.googleapis.com/v1beta/openai/")
+    logger.info("Gemini API initialized.")
+else:
+    logger.warning("GEMINI_API_KEY not found.")
+
+# 3. OpenRouter (Tertiary)
+openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+if openrouter_api_key:
+    clients["openrouter"] = AsyncOpenAI(api_key=openrouter_api_key, base_url="https://openrouter.ai/api/v1")
+    logger.info("OpenRouter API initialized.")
+else:
+    logger.warning("OPENROUTER_API_KEY not found.")
+
+# Provider and Model configurations in order of priority
+FALLBACK_CONFIGS = [
+    {"provider": "groq", "model": "llama-3.3-70b-versatile"},
+    {"provider": "groq", "model": "llama-3.1-70b-versatile"},
+    {"provider": "groq", "model": "mixtral-8x7b-32768"},
+    {"provider": "gemini", "model": "gemini-1.5-flash"},
+    {"provider": "gemini", "model": "gemini-1.5-pro"},
+    {"provider": "openrouter", "model": "meta-llama/llama-3-8b-instruct:free"},
+    {"provider": "openrouter", "model": "google/gemma-2-9b-it:free"}
+]
+
+async def _execute_with_fallback(messages: list, temperature: float = 0.5):
+    """Executes a chat completion request across providers with fallback logic."""
+    for config in FALLBACK_CONFIGS:
+        provider = config["provider"]
+        model_name = config["model"]
+        
+        if provider not in clients:
+            continue
+            
+        try:
+            client = clients[provider]
+            response = await client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                temperature=temperature
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.warning(f"Fallback warning: {provider} model {model_name} failed: {str(e)}")
+            continue
+            
+    raise Exception("All API providers failed.")
 
 # Simple in-memory cache to prevent duplicate requests
 TEXT_CACHE = {}
@@ -75,9 +127,9 @@ GLOBAL ANTI-REPETITION RULE (VERY IMPORTANT)
         if "Fill-in-the-Blank" in modules:
             prompt += "- ALWAYS generate EXACTLY 20 Fill-in-the-Blanks (`fill_blanks`) to ensure enough unique answers can be filtered\n"
         if "Written Test" in modules:
-            prompt += "- ALWAYS generate EXACTLY 10 Written Questions (`short_questions`)\n"
+            prompt += "- ALWAYS generate EXACTLY 15 Written Questions (`short_questions`)\n"
         if "Flashcards" in modules:
-            prompt += "- ALWAYS generate EXACTLY 10 Flashcards (`flashcards`)\n"
+            prompt += "- ALWAYS generate EXACTLY 15 Flashcards (`flashcards`)\n"
         prompt += "- If text is too short, reduce intelligently without repetition or hallucination\n\n"
 
     if "Fill-in-the-Blank" in modules:
@@ -223,18 +275,18 @@ TEXT
 {text[:15000]}
 """
     
-    models_to_try = [
-        "llama-3.3-70b-versatile",
-        "llama-3.1-70b-versatile",
-        "mixtral-8x7b-32768",
-        "gemma2-9b-it",
-        "llama-2-70b-chat",
-    ]
-    
-    for model_name in models_to_try:
+    for config in FALLBACK_CONFIGS:
+        provider = config["provider"]
+        model_name = config["model"]
+        
+        if provider not in clients:
+            continue
+            
         try:
-            logger.info(f"Calling Groq API with model: {model_name} for modules: {modules}")
-            # Only use response_format for models that definitely support it to prevent API errors
+            logger.info(f"Calling {provider.upper()} API with model: {model_name} for modules: {modules}")
+            
+            client = clients[provider]
+            
             api_kwargs = {
                 "model": model_name,
                 "messages": [
@@ -242,14 +294,16 @@ TEXT
                     {"role": "user", "content": prompt}
                 ],
                 "temperature": 0.7,
-                "max_tokens": 8000
             }
-            if "llama-3" in model_name or "mixtral" in model_name:
+            
+            # Response formats differ by provider and model. 
+            # Safest is to use response_format for Groq natively.
+            if provider == "groq" and ("llama-3" in model_name or "mixtral" in model_name):
                 api_kwargs["response_format"] = {"type": "json_object"}
                 
             response = await client.chat.completions.create(**api_kwargs)
             
-            logger.info(f"Groq API response received with model {model_name} for {modules}")
+            logger.info(f"{provider.upper()} API response received with model {model_name} for {modules}")
             result_content = response.choices[0].message.content
             
             clean_content = result_content.strip()
@@ -286,7 +340,7 @@ TEXT
             logger.warning(f"Model {model_name} failed: {str(model_error)}")
             continue
     
-    logger.error(f"All Groq models failed. Group {modules} will be skipped.")
+    logger.error(f"All API fallback models failed. Group {modules} will be skipped.")
     return {}
 
 async def generate_flashcards(text: str, card_type: str = "Standard", selected_modules: list = None):
@@ -409,12 +463,8 @@ Always behave like a real tutor:
         api_messages.append({"role": "user" if msg["sender"] == "user" else "assistant", "content": msg["text"]})
         
     try:
-        response = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=api_messages,
-            temperature=0.5
-        )
-        return response.choices[0].message.content
+        response_text = await _execute_with_fallback(api_messages, temperature=0.5)
+        return response_text
     except Exception as e:
         logger.error(f"Chat API failed: {str(e)}")
         raise Exception("Failed to generate AI response.")
@@ -447,16 +497,12 @@ async def grade_written_test(questions: list, user_answers: list, context_text: 
     prompt_str = f"Questions: {json.dumps(questions)}\nStudent Answers: {json.dumps(user_answers)}"
     
     try:
-        response = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt_str}
-            ],
-            temperature=0.2
-        )
+        result_content = await _execute_with_fallback([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt_str}
+        ], temperature=0.2)
         
-        result_content = response.choices[0].message.content.strip()
+        result_content = result_content.strip()
         if result_content.startswith("```json"): result_content = result_content[7:]
         if result_content.startswith("```"): result_content = result_content[3:]
         if result_content.endswith("```"): result_content = result_content[:-3]
