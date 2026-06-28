@@ -65,10 +65,52 @@ from sqlalchemy import func
 
 @router.put("/activity")
 def log_activity(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    activity = models.ActivityLog(user_id=current_user.id, date=datetime.datetime.utcnow())
+    now = datetime.datetime.utcnow()
+    activity = models.ActivityLog(user_id=current_user.id, date=now)
     db.add(activity)
+    
+    # Calculate streak
+    user_stats = db.query(models.UserStats).filter(models.UserStats.user_id == current_user.id).first()
+    if not user_stats:
+        user_stats = models.UserStats(user_id=current_user.id, current_streak=1, last_study_date=now)
+        db.add(user_stats)
+    else:
+        today = now.date()
+        if user_stats.last_study_date:
+            last_date = user_stats.last_study_date.date()
+            if last_date == today:
+                # Already active today, streak doesn't change
+                pass
+            elif last_date == today - datetime.timedelta(days=1):
+                # Consecutive day!
+                user_stats.current_streak += 1
+                user_stats.last_study_date = now
+            else:
+                # Streak broken, reset to 1
+                user_stats.current_streak = 1
+                user_stats.last_study_date = now
+        else:
+            user_stats.current_streak = 1
+            user_stats.last_study_date = now
+            
     db.commit()
-    return {"message": "Activity logged"}
+    return {"message": "Activity logged", "streak": user_stats.current_streak}
+
+class StudyTimeUpdate(BaseModel):
+    seconds: int
+
+@router.put("/study-time")
+def add_study_time(payload: StudyTimeUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    user_stats = db.query(models.UserStats).filter(models.UserStats.user_id == current_user.id).first()
+    if not user_stats:
+        user_stats = models.UserStats(user_id=current_user.id, time_spent_studying=payload.seconds)
+        db.add(user_stats)
+    else:
+        if user_stats.time_spent_studying is None:
+            user_stats.time_spent_studying = 0
+        user_stats.time_spent_studying += payload.seconds
+    db.commit()
+    return {"message": "Study time updated", "time_spent_studying": user_stats.time_spent_studying}
 
 @router.get("/activity/weekly")
 def get_weekly_activity(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

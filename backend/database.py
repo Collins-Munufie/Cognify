@@ -13,7 +13,7 @@ if not DATABASE_URL:
     SQLALCHEMY_DATABASE_URL = "sqlite:///./flashcards.db"
     # connect_args={"check_same_thread": False} is needed only for SQLite
     engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False, "timeout": 30}
     )
 else:
     # SQLAlchemy 1.4+ requires "postgresql://" instead of "postgres://"
@@ -36,3 +36,23 @@ def get_db():
         yield db
     finally:
         db.close()
+
+from sqlalchemy import text
+
+def upgrade_db_schema(engine):
+    with engine.begin() as conn:
+        # Check and add columns to user_stats table
+        columns_to_add = [
+            ("time_spent_studying", "INTEGER DEFAULT 0"),
+            ("success_generations", "INTEGER DEFAULT 0"),
+            ("failed_generations", "INTEGER DEFAULT 0"),
+            ("processing_status", "VARCHAR DEFAULT 'Idle'")
+        ]
+        for col_name, col_type in columns_to_add:
+            try:
+                conn.execute(text(f"ALTER TABLE user_stats ADD COLUMN {col_name} {col_type}"))
+                print(f"Database upgrade: Added column '{col_name}' to 'user_stats' table.")
+            except Exception as e:
+                # Column likely already exists
+                pass
+

@@ -27,6 +27,12 @@ class UserStats(Base):
     true_false_accuracy = Column(Integer, default=0)
     fill_blank_accuracy = Column(Integer, default=0)
     total_flashcards_studied = Column(Integer, default=0)
+    
+    # New Columns for QA & Dashboard Analytics Upgrade
+    time_spent_studying = Column(Integer, default=0) # in seconds
+    success_generations = Column(Integer, default=0)
+    failed_generations = Column(Integer, default=0)
+    processing_status = Column(String, default="Idle")
 
     user = relationship("User", back_populates="stats")
 

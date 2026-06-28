@@ -8,9 +8,7 @@ from sqlalchemy.orm import Session
 import bcrypt
 from jose import JWTError, jwt
 from pydantic import BaseModel
-from google.oauth2 import id_token
-from google.auth.transport import requests
-import secrets
+
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -33,8 +31,6 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-class GoogleToken(BaseModel):
-    credential: str
 
 def verify_password(plain_password, hashed_password):
     if not hashed_password:
@@ -80,6 +76,23 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     if user is None:
         raise credentials_exception
     return user
+
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
+
+async def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme_optional), db: Session = Depends(get_db)):
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            return None
+    except JWTError:
+        return None
+        
+    user = db.query(models.User).filter(models.User.email == email).first()
+    return user
+
 
 @router.post("/register", response_model=Token)
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
@@ -136,6 +149,12 @@ def read_users_me(current_user: models.User = Depends(get_current_user)):
             "trueFalseAccuracy": stats.true_false_accuracy if stats else 0,
             "fillBlankAccuracy": stats.fill_blank_accuracy if stats else 0,
             "total_flashcards_studied": stats.total_flashcards_studied if stats else 0,
+            "current_streak": stats.current_streak if stats else 0,
+            "last_study_date": stats.last_study_date.isoformat() if stats and stats.last_study_date else None,
+            "time_spent_studying": stats.time_spent_studying if stats else 0,
+            "success_generations": stats.success_generations if stats else 0,
+            "failed_generations": stats.failed_generations if stats else 0,
+            "processing_status": stats.processing_status if stats else "Idle",
         }
     }
 
@@ -167,62 +186,14 @@ def update_users_me(profile_data: ProfileUpdate, current_user: models.User = Dep
             "trueFalseAccuracy": stats.true_false_accuracy if stats else 0,
             "fillBlankAccuracy": stats.fill_blank_accuracy if stats else 0,
             "total_flashcards_studied": stats.total_flashcards_studied if stats else 0,
+            "current_streak": stats.current_streak if stats else 0,
+            "last_study_date": stats.last_study_date.isoformat() if stats and stats.last_study_date else None,
+            "time_spent_studying": stats.time_spent_studying if stats else 0,
+            "success_generations": stats.success_generations if stats else 0,
+            "failed_generations": stats.failed_generations if stats else 0,
+            "processing_status": stats.processing_status if stats else "Idle",
         }
     }
 
-@router.post("/google", response_model=Token)
-def login_with_google(token_data: GoogleToken, db: Session = Depends(get_db)):
-    try:
-        # Verify the Google JWT token
-        idinfo = id_token.verify_oauth2_token(
-            token_data.credential, 
-            requests.Request(), 
-            os.environ.get("GOOGLE_CLIENT_ID"),
-            clock_skew_in_seconds=60
-        )
-        
-        email = idinfo.get("email")
-        name = idinfo.get("name")
-        picture = idinfo.get("picture")
-        
-        if not email:
-            raise HTTPException(status_code=400, detail="Email not provided by Google")
-            
-        user = db.query(models.User).filter(models.User.email == email).first()
-        
-        if not user:
-            # Create new user
-            # Generate a random password since they use Google Auth
-            random_pwd = secrets.token_urlsafe(16)
-            hashed_password = get_password_hash(random_pwd)
-            
-            user = models.User(
-                email=email, 
-                hashed_password=hashed_password,
-                full_name=name,
-                profile_picture=picture
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        else:
-            # Update user info if it was missing
-            if not user.full_name and name:
-                user.full_name = name
-            if not user.profile_picture and picture:
-                user.profile_picture = picture
-            db.commit()
-            
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_access_token(
-            data={"sub": user.email}, expires_delta=access_token_expires
-        )
-        return {"access_token": access_token, "token_type": "bearer"}
-        
-    except ValueError as e:
-        print(f"Google Token Verification Failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid Google token: {str(e)}",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+
+

@@ -9,11 +9,13 @@ from services.web_scraper import extract_text_from_url
 from services.video_processor import extract_transcript
 
 import models
-from database import engine
+from database import engine, upgrade_db_schema
 from routers import auth, flashcard_sets, user_stats
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
+upgrade_db_schema(engine)
+
 
 app = FastAPI(title="AI Flashcard Generator Phase 3")
 
@@ -45,11 +47,30 @@ app.add_middleware(
 def read_root():
     return {"message": "AI Flashcard Generator API is running!"}
 
+from database import get_db
+from sqlalchemy.orm import Session
+from fastapi import Depends
+from typing import Optional
+
 @app.post("/api/generate-flashcards")
-async def generate_flashcards_endpoint(file: UploadFile = File(...), card_type: str = Form("Standard Q&A")):
+async def generate_flashcards_endpoint(
+    file: UploadFile = File(...), 
+    card_type: str = Form("Standard Q&A"),
+    current_user: Optional[models.User] = Depends(auth.get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     allowed_exts = (".pdf", ".docx", ".pptx", ".txt")
     if not file.filename.lower().endswith(allowed_exts):
         raise HTTPException(status_code=400, detail="Unsupported file format. Please upload a PDF, DOCX, PPTX, or TXT.")
+
+    user_stats = None
+    if current_user:
+        user_stats = db.query(models.UserStats).filter(models.UserStats.user_id == current_user.id).first()
+        if not user_stats:
+            user_stats = models.UserStats(user_id=current_user.id)
+            db.add(user_stats)
+        user_stats.processing_status = "Processing"
+        db.commit()
 
     content = await file.read()
     
@@ -68,18 +89,41 @@ async def generate_flashcards_endpoint(file: UploadFile = File(...), card_type: 
         )
         
         study_set_data["document_info"] = document_info
+        
+        if user_stats:
+            user_stats.success_generations += 1
+            user_stats.processing_status = "Idle"
+            db.commit()
+            
         return study_set_data
         
     except Exception as e:
+        if user_stats:
+            user_stats.failed_generations += 1
+            user_stats.processing_status = "Idle"
+            db.commit()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate-from-url")
-async def generate_from_url_endpoint(req: UrlRequest):
+async def generate_from_url_endpoint(
+    req: UrlRequest,
+    current_user: Optional[models.User] = Depends(auth.get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     url = req.url
     card_type = req.card_type
     if not url:
         raise HTTPException(status_code=400, detail="URL cannot be empty")
         
+    user_stats = None
+    if current_user:
+        user_stats = db.query(models.UserStats).filter(models.UserStats.user_id == current_user.id).first()
+        if not user_stats:
+            user_stats = models.UserStats(user_id=current_user.id)
+            db.add(user_stats)
+        user_stats.processing_status = "Processing"
+        db.commit()
+
     try:
         if "youtube.com" in url or "youtu.be" in url:
             extracted_text = extract_transcript(url)
@@ -97,11 +141,25 @@ async def generate_from_url_endpoint(req: UrlRequest):
         )
         
         study_set_data["document_info"] = document_info
+        
+        if user_stats:
+            user_stats.success_generations += 1
+            user_stats.processing_status = "Idle"
+            db.commit()
+            
         return study_set_data
         
     except ValueError as val_e:
+        if user_stats:
+            user_stats.failed_generations += 1
+            user_stats.processing_status = "Idle"
+            db.commit()
         raise HTTPException(status_code=400, detail=str(val_e))
     except Exception as e:
+        if user_stats:
+            user_stats.failed_generations += 1
+            user_stats.processing_status = "Idle"
+            db.commit()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/extract-document")
@@ -135,7 +193,20 @@ async def extract_url_endpoint(req: UrlRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate-selected")
-async def generate_selected_endpoint(req: SelectiveGenerationRequest):
+async def generate_selected_endpoint(
+    req: SelectiveGenerationRequest,
+    current_user: Optional[models.User] = Depends(auth.get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    user_stats = None
+    if current_user:
+        user_stats = db.query(models.UserStats).filter(models.UserStats.user_id == current_user.id).first()
+        if not user_stats:
+            user_stats = models.UserStats(user_id=current_user.id)
+            db.add(user_stats)
+        user_stats.processing_status = "Processing"
+        db.commit()
+
     try:
         import asyncio
         study_set_data, document_info = await asyncio.gather(
@@ -145,8 +216,18 @@ async def generate_selected_endpoint(req: SelectiveGenerationRequest):
         study_set_data["document_info"] = document_info
         study_set_data["raw_content"] = req.extracted_text
         study_set_data["selected_modules"] = req.modules
+        
+        if user_stats:
+            user_stats.success_generations += 1
+            user_stats.processing_status = "Idle"
+            db.commit()
+            
         return study_set_data
     except Exception as e:
+        if user_stats:
+            user_stats.failed_generations += 1
+            user_stats.processing_status = "Idle"
+            db.commit()
         raise HTTPException(status_code=500, detail=str(e))
 
 class ChatRequest(BaseModel):
