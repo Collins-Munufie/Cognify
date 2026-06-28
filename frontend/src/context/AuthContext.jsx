@@ -10,11 +10,42 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUser = async (tokenToUse) => {
+    const activeToken = tokenToUse || token;
+    if (!activeToken) {
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${activeToken}`;
+      const response = await axios.get('http://127.0.0.1:8000/api/auth/me');
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to fetch user", error);
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (token) {
       localStorage.setItem('token', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      fetchUser();
+      if (!user) {
+        fetchUser(token).catch(err => {
+          console.error("Initial user fetch failed:", err);
+        });
+      } else {
+        setLoading(false);
+      }
     } else {
       localStorage.removeItem('token');
       delete axios.defaults.headers.common['Authorization'];
@@ -22,18 +53,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   }, [token]);
-
-  const fetchUser = async () => {
-    try {
-      const response = await axios.get('http://127.0.0.1:8000/api/auth/me');
-      setUser(response.data);
-    } catch (error) {
-      console.error("Failed to fetch user", error);
-      setToken(null);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = async (email, password) => {
     const formData = new URLSearchParams();
@@ -43,30 +62,29 @@ export const AuthProvider = ({ children }) => {
     const response = await axios.post('http://127.0.0.1:8000/api/auth/login', formData, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
-    setToken(response.data.access_token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-    await fetchUser();
+    
+    const accessToken = response.data.access_token;
+    localStorage.setItem('token', accessToken);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    await fetchUser(accessToken);
+    setToken(accessToken);
   };
 
   const register = async (email, password) => {
     const response = await axios.post('http://127.0.0.1:8000/api/auth/register', { email, password });
-    setToken(response.data.access_token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-    await fetchUser();
-  };
-
-  const loginWithGoogle = async (credential) => {
-    const response = await axios.post('http://127.0.0.1:8000/api/auth/google', { credential });
-    setToken(response.data.access_token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.access_token}`;
-    await fetchUser();
+    
+    const accessToken = response.data.access_token;
+    localStorage.setItem('token', accessToken);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+    await fetchUser(accessToken);
+    setToken(accessToken);
   };
 
   const logout = () => {
     setToken(null);
   };
 
-  const value = { user, token, loading, login, register, loginWithGoogle, logout, fetchUser };
+  const value = { user, token, loading, login, register, logout, fetchUser };
 
   return (
     <AuthContext.Provider value={value}>
@@ -74,3 +92,4 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+

@@ -2,18 +2,18 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { BrainCircuit, Loader2 } from 'lucide-react';
+import { BrainCircuit, Loader2, Eye, EyeOff } from 'lucide-react';
 import Logo from './Logo';
-import { GoogleLogin } from '@react-oauth/google';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { login, register, loginWithGoogle } = useAuth();
+  const { login, register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -33,23 +33,6 @@ export default function AuthPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setError('');
-    setLoading(true);
-    try {
-      await loginWithGoogle(credentialResponse.credential);
-      navigate(isLogin ? '/dashboard' : '/');
-    } catch (err) {
-      setError(err.response?.data?.detail || "Google authentication failed.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleError = () => {
-    setError("Google Sign-In was unsuccessful. Try again.");
   };
 
   return (
@@ -93,13 +76,22 @@ export default function AuthPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-brand-muted mb-1">Password</label>
-            <input 
-              type="password" 
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-brand-bg text-brand-text border border-brand-border rounded-xl focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-4 pr-12 py-3 bg-brand-bg text-brand-text border border-brand-border rounded-xl focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-text transition-colors cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
 
           <button 
@@ -110,24 +102,6 @@ export default function AuthPage() {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : (isLogin ? "Sign In" : "Sign Up")}
           </button>
         </form>
-
-        <div className="mt-6 flex items-center gap-4">
-          <div className="h-px bg-brand-border flex-1"></div>
-          <span className="text-sm text-brand-muted">or continue with</span>
-          <div className="h-px bg-brand-border flex-1"></div>
-        </div>
-
-        <div className="mt-6 flex justify-center">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={handleGoogleError}
-            useOneTap
-            theme="filled_blue"
-            shape="pill"
-            text={isLogin ? "signin_with" : "signup_with"}
-            width="100%"
-          />
-        </div>
 
         <div className="mt-6 text-center">
           <button 
@@ -142,3 +116,4 @@ export default function AuthPage() {
     </div>
   );
 }
+

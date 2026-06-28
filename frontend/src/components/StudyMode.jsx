@@ -52,6 +52,31 @@ export default function StudyMode() {
     fetchSetData();
   }, [setId]);
 
+  // Track study session time and activity
+  useEffect(() => {
+    const logSessionActivity = async () => {
+      try {
+        await axios.put('http://127.0.0.1:8000/api/user-stats/activity');
+        if (fetchUser) fetchUser();
+      } catch (e) {
+        console.error("Failed to log activity:", e);
+      }
+    };
+    logSessionActivity();
+
+    const intervalId = setInterval(async () => {
+      try {
+        await axios.put('http://127.0.0.1:8000/api/user-stats/study-time', { seconds: 10 });
+      } catch (e) {
+        // Silently catch
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [setId]);
+
   const fetchSetData = async () => {
     try {
       const res = await axios.get('http://127.0.0.1:8000/api/flashcard-sets');
