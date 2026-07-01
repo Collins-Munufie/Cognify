@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, Send, BrainCircuit, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import axios from 'axios';
+import api, { getErrorMessage } from '../lib/api';
 
 export default function StudyChat({ rawContent }) {
   const [messages, setMessages] = useState([
@@ -24,15 +24,15 @@ export default function StudyChat({ rawContent }) {
     setIsTyping(true);
     
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/chat", {
+      const response = await api.post("/api/chat", {
          messages: [...messages, userMessage],
          context_text: rawContent || "No context provided."
-      });
+      }, { longRunning: true });
       
       setMessages(prev => [...prev, { id: Date.now() + 1, text: response.data.response, sender: 'ai' }]);
     } catch (err) {
       console.error(err);
-      setMessages(prev => [...prev, { id: Date.now() + 1, text: "I'm having trouble connecting to the network right now. Please try again later.", sender: 'ai' }]);
+      setMessages(prev => [...prev, { id: Date.now() + 1, text: getErrorMessage(err, "I'm having trouble connecting right now. Please try again later."), sender: 'ai' }]);
     } finally {
       setIsTyping(false);
     }

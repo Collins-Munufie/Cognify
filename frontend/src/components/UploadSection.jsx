@@ -4,7 +4,7 @@ import { UploadCloud, FileText, X, Sparkles, Loader2, AlertCircle, Link as LinkI
 
 export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating, error }) {
   const [activeTab, setActiveTab] = useState('pdf'); // 'pdf' or 'url'
-  const [cardType, setCardType] = useState('Standard Q&A');
+  const [cardType] = useState('Standard Q&A');
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [urlInput, setUrlInput] = useState('');

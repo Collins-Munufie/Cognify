@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Loader2, Eye, EyeOff } from 'lucide-react';
 import Logo from './Logo';
+import { getErrorMessage } from '../lib/api';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -29,7 +30,7 @@ export default function AuthPage() {
         navigate('/');
       }
     } catch (err) {
-      setError(err.response?.data?.detail || "Authentication failed. Please try again.");
+      setError(getErrorMessage(err, "Authentication failed. Please try again."));
     } finally {
       setLoading(false);
     }

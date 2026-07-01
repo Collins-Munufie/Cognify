@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import api from '../lib/api';
 
 const AuthContext = createContext();
 
@@ -10,17 +10,18 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = async (tokenToUse) => {
+  const fetchUser = useCallback(async (tokenToUse) => {
     const activeToken = tokenToUse || token;
     if (!activeToken) {
       setLoading(false);
+      setUser(null);
       return;
     }
     
-    setLoading(true);
     try {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${activeToken}`;
-      const response = await axios.get('http://127.0.0.1:8000/api/auth/me');
+      const response = await api.get('/api/auth/me', {
+        headers: { Authorization: `Bearer ${activeToken}` },
+      });
       setUser(response.data);
       return response.data;
     } catch (error) {
@@ -28,67 +29,81 @@ export const AuthProvider = ({ children }) => {
       setToken(null);
       setUser(null);
       localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
       throw error;
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (token) {
-      localStorage.setItem('token', token);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      if (!user) {
-        fetchUser(token).catch(err => {
-          console.error("Initial user fetch failed:", err);
-        });
-      } else {
-        setLoading(false);
-      }
-    } else {
-      localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
-      setUser(null);
-      setLoading(false);
-    }
   }, [token]);
 
-  const login = async (email, password) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUser = async () => {
+      if (!token) {
+        localStorage.removeItem('token');
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem('token', token);
+      setLoading(true);
+      try {
+        await fetchUser(token);
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Initial user fetch failed:", err);
+        }
+      }
+    };
+
+    loadUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, fetchUser]);
+
+  const login = useCallback(async (email, password) => {
     const formData = new URLSearchParams();
-    formData.append('username', email); // OAuth2 expects username
+    formData.append('username', email);
     formData.append('password', password);
     
-    const response = await axios.post('http://127.0.0.1:8000/api/auth/login', formData, {
+    const response = await api.post('/api/auth/login', formData, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
     
     const accessToken = response.data.access_token;
     localStorage.setItem('token', accessToken);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    await fetchUser(accessToken);
+    const nextUser = await fetchUser(accessToken);
     setToken(accessToken);
-  };
+    return nextUser;
+  }, [fetchUser]);
 
-  const register = async (email, password) => {
-    const response = await axios.post('http://127.0.0.1:8000/api/auth/register', { email, password });
+  const register = useCallback(async (email, password) => {
+    const response = await api.post('/api/auth/register', { email, password });
     
     const accessToken = response.data.access_token;
     localStorage.setItem('token', accessToken);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    await fetchUser(accessToken);
+    const nextUser = await fetchUser(accessToken);
     setToken(accessToken);
-  };
+    return nextUser;
+  }, [fetchUser]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setToken(null);
-  };
+    setUser(null);
+    localStorage.removeItem('token');
+  }, []);
 
-  const value = { user, token, loading, login, register, logout, fetchUser };
+  const value = useMemo(
+    () => ({ user, token, loading, login, register, logout, fetchUser }),
+    [user, token, loading, login, register, logout, fetchUser]
+  );
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

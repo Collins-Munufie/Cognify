@@ -24,7 +24,12 @@ else:
         
     SQLALCHEMY_DATABASE_URL = DATABASE_URL
     # For PostgreSQL (Supabase/Neon), we do NOT pass check_same_thread
-    engine = create_engine(SQLALCHEMY_DATABASE_URL)
+    engine = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        connect_args={"connect_timeout": 10},
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

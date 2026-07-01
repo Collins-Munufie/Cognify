@@ -117,12 +117,6 @@ def get_weekly_activity(db: Session = Depends(get_db), current_user: models.User
     today = datetime.datetime.utcnow().date()
     start_date = today - datetime.timedelta(days=6)
     
-    # Get all logs for last 7 days
-    logs = db.query(models.ActivityLog).filter(
-        models.ActivityLog.user_id == current_user.id,
-        func.date(models.ActivityLog.date) >= start_date
-    ).all()
-    
     # Initialize the week with 0 sessions
     days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     activity_map = {}
@@ -130,11 +124,23 @@ def get_weekly_activity(db: Session = Depends(get_db), current_user: models.User
         d = start_date + datetime.timedelta(days=i)
         day_name = days[d.weekday()]
         activity_map[day_name] = 0
-        
-    for log in logs:
-        day_name = days[log.date.weekday()]
+
+    grouped_logs = (
+        db.query(func.date(models.ActivityLog.date), func.count(models.ActivityLog.id))
+        .filter(
+            models.ActivityLog.user_id == current_user.id,
+            func.date(models.ActivityLog.date) >= start_date
+        )
+        .group_by(func.date(models.ActivityLog.date))
+        .all()
+    )
+
+    for log_date, session_count in grouped_logs:
+        if isinstance(log_date, str):
+            log_date = datetime.date.fromisoformat(log_date)
+        day_name = days[log_date.weekday()]
         if day_name in activity_map:
-            activity_map[day_name] += 1
+            activity_map[day_name] = session_count
             
     # Return as an array of objects for Recharts
     # Recharts expects the array to be in order. We can just sort by Mon-Sun, but actually it's better to sort chronologically.

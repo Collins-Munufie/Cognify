@@ -2,10 +2,9 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import UploadSection from "./UploadSection";
 import FlashcardList from "./FlashcardList";
-import DocumentInfoPanel from "./DocumentInfoPanel";
 import { BrainCircuit, Save, Loader2, Check, ArrowRight, BookOpen, Layers, Target, FileText, Headphones, Zap, ScrollText, CheckCircle2 } from "lucide-react";
 import Logo from './Logo';
-import axios from "axios";
+import api, { getErrorMessage } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
@@ -34,7 +33,6 @@ export default function Generator() {
 
   const [flashcards, setFlashcards] = useState([]);
   const [completeStudySet, setCompleteStudySet] = useState(null);
-  const [documentInfo, setDocumentInfo] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState("");
 
@@ -54,18 +52,18 @@ export default function Generator() {
     formData.append("file", file);
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/extract-document", formData);
+      const response = await api.post("/api/extract-document", formData);
       const extractedText = response.data.extracted_text;
       const title = response.data.title;
       setExtractedData(extractedText);
       setSetTitle(title || "Untitled Set");
       
       setPhase(2);
-      setIsGenerating(false);
       
     } catch (err) {
       console.error("Extraction error:", err);
-      setError(err.response?.data?.detail || "An error occurred while processing the document.");
+      setError(getErrorMessage(err, "An error occurred while processing the document."));
+    } finally {
       setIsGenerating(false);
     }
   };
@@ -75,14 +73,14 @@ export default function Generator() {
     setError("");
 
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/extract-url", { url, card_type: "Standard Q&A" });
+      const response = await api.post("/api/extract-url", { url, card_type: "Standard Q&A" }, { longRunning: true });
       const extractedText = response.data.extracted_text;
       
       let title = "Web Link Set";
       try {
         const domain = new URL(url).hostname.replace("www.", "");
         title = `${domain} Study Material`;
-      } catch (e) {
+      } catch {
         title = "Web Link Set";
       }
       
@@ -90,11 +88,11 @@ export default function Generator() {
       setSetTitle(title);
       
       setPhase(2);
-      setIsGenerating(false);
       
     } catch (err) {
       console.error("Extraction error:", err);
-      setError(err.response?.data?.detail || "An error occurred while processing the URL.");
+      setError(getErrorMessage(err, "An error occurred while processing the URL."));
+    } finally {
       setIsGenerating(false);
     }
   };
@@ -109,11 +107,11 @@ export default function Generator() {
     setError("");
     
     try {
-      const response = await axios.post("http://127.0.0.1:8000/api/generate-selected", {
+      const response = await api.post("/api/generate-selected", {
         extracted_text: extractedData,
         modules: selectedModules,
         title: setTitle || "Untitled Set"
-      });
+      }, { longRunning: true });
       
       const payloadData = response.data;
       
@@ -138,18 +136,17 @@ export default function Generator() {
       if (!user) {
          setCompleteStudySet(payloadData);
          setFlashcards(payloadData.flashcards || []);
-         setDocumentInfo(payloadData.document_info || null);
          setPhase(3); // fallback if not logged in
          setIsGenerating(false);
          return;
       }
       
-      const postResponse = await axios.post("http://127.0.0.1:8000/api/flashcard-sets/", postPayload);
+      const postResponse = await api.post("/api/flashcard-sets/", postPayload);
       navigate(`/study/${postResponse.data.id}`); // zero-click seamless redirect natively!
       
     } catch (err) {
       console.error("Generation/Save error:", err);
-      setError(err.response?.data?.detail || "Failed to generate or save study materials.");
+      setError(getErrorMessage(err, "Failed to generate or save study materials."));
       setIsGenerating(false);
     }
   };
@@ -164,7 +161,6 @@ export default function Generator() {
     setPhase(1);
     setCompleteStudySet(null);
     setFlashcards([]);
-    setDocumentInfo(null);
     setError("");
     setSaved(false);
     setExtractedData(null);
@@ -194,12 +190,12 @@ export default function Generator() {
         selected_modules: selectedModules
       };
       
-      const postResponse = await axios.post("http://127.0.0.1:8000/api/flashcard-sets/", postPayload);
+      const postResponse = await api.post("/api/flashcard-sets/", postPayload);
       setSavedSetId(postResponse.data.id);
       setSaved(true);
     } catch (err) {
       console.error(err);
-      alert("Failed to save flashcard set.");
+      setError(getErrorMessage(err, "Failed to save flashcard set."));
     } finally {
       setSaving(false);
     }
