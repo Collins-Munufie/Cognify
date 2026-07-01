@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from typing import List
 from pydantic import BaseModel
 
@@ -32,6 +32,43 @@ class FlashcardSetCreate(BaseModel):
 
 class FlashcardUpdateMastery(BaseModel):
     mastery_level: int
+
+def _json_list(value):
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+        return parsed if isinstance(parsed, list) else []
+    except (TypeError, json.JSONDecodeError):
+        return []
+
+def serialize_flashcard_set(s: models.FlashcardSet):
+    return {
+        "id": s.id,
+        "title": s.title,
+        "summary": s.summary or "",
+        "key_points": _json_list(s.key_points),
+        "quiz": _json_list(s.quiz),
+        "fill_blanks": _json_list(s.fill_blanks),
+        "short_questions": _json_list(s.short_questions),
+        "true_false": _json_list(s.true_false),
+        "definitions": _json_list(s.definitions),
+        "tutor_lesson": s.tutor_lesson if s.tutor_lesson else None,
+        "podcast_script": s.podcast_script if s.podcast_script else None,
+        "raw_content": s.raw_content if s.raw_content else "",
+        "selected_modules": _json_list(s.selected_modules),
+        "created_at": s.created_at,
+        "last_accessed": s.last_accessed,
+        "flashcards": [
+            {
+                "id": fc.id,
+                "question": fc.question,
+                "answer": fc.answer,
+                "mastery_level": fc.mastery_level,
+            }
+            for fc in s.flashcards
+        ],
+    }
 
 @router.post("/")
 def save_flashcard_set(
@@ -84,30 +121,32 @@ def get_user_flashcard_sets(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    sets = db.query(models.FlashcardSet).filter(models.FlashcardSet.user_id == current_user.id).all()
-    
-    result = []
-    for s in sets:
-        flashcards = db.query(models.Flashcard).filter(models.Flashcard.set_id == s.id).all()
-        result.append({
-            "id": s.id,
-            "title": s.title,
-            "summary": s.summary or "",
-            "key_points": json.loads(s.key_points) if s.key_points else [],
-            "quiz": json.loads(s.quiz) if s.quiz else [],
-            "fill_blanks": json.loads(s.fill_blanks) if s.fill_blanks else [],
-            "short_questions": json.loads(s.short_questions) if s.short_questions else [],
-            "true_false": json.loads(s.true_false) if s.true_false else [],
-            "definitions": json.loads(s.definitions) if s.definitions else [],
-            "tutor_lesson": s.tutor_lesson if s.tutor_lesson else None,
-            "podcast_script": s.podcast_script if s.podcast_script else None,
-            "raw_content": s.raw_content if s.raw_content else "",
-            "selected_modules": json.loads(s.selected_modules) if s.selected_modules else [],
-            "created_at": s.created_at,
-            "last_accessed": s.last_accessed,
-            "flashcards": [{"id": fc.id, "question": fc.question, "answer": fc.answer, "mastery_level": fc.mastery_level} for fc in flashcards]
-        })
-    return result
+    sets = (
+        db.query(models.FlashcardSet)
+        .options(selectinload(models.FlashcardSet.flashcards))
+        .filter(models.FlashcardSet.user_id == current_user.id)
+        .order_by(models.FlashcardSet.last_accessed.desc(), models.FlashcardSet.created_at.desc())
+        .all()
+    )
+
+    return [serialize_flashcard_set(s) for s in sets]
+
+@router.get("/{set_id}")
+def get_user_flashcard_set(
+    set_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    flashcard_set = (
+        db.query(models.FlashcardSet)
+        .options(selectinload(models.FlashcardSet.flashcards))
+        .filter(models.FlashcardSet.id == set_id, models.FlashcardSet.user_id == current_user.id)
+        .first()
+    )
+    if not flashcard_set:
+        raise HTTPException(status_code=404, detail="Study set not found")
+
+    return serialize_flashcard_set(flashcard_set)
 
 @router.put("/flashcards/{flashcard_id}/mastery")
 def update_flashcard_mastery(

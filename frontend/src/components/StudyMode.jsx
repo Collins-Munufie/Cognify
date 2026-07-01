@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, X, RotateCcw, BrainCircuit, Play, Layers, CheckCircle2, Type, ArrowRight, Target, AlignLeft, BookOpen, Headphones, PlayCircle, PauseCircle, StopCircle, Hash, FileText } from 'lucide-react';
-import axios from 'axios';
+import api, { getErrorMessage } from '../lib/api';
 import ReactMarkdown from 'react-markdown';
 import StudyChat from './StudyChat';
 import { useAuth } from '../context/AuthContext';
@@ -17,12 +17,13 @@ export default function StudyMode() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [sessionComplete, setSessionComplete] = useState(false);
   
   const [activeMode, setActiveMode] = useState('notes');
   const [podcastVoice, setPodcastVoice] = useState('Conversational Mode');
 
-  const { fetchUser, user } = useAuth(); // AuthContext to refresh stats
+  const { fetchUser } = useAuth(); // AuthContext to refresh stats
 
   // Sidebar List Index
   const [testIndex, setTestIndex] = useState(0);
@@ -48,45 +49,14 @@ export default function StudyMode() {
   const [isPlaying, setIsPlaying] = useState(false);
   const synthRef = useRef(window.speechSynthesis);
 
-  useEffect(() => {
-    fetchSetData();
-  }, [setId]);
-
-  // Track study session time and activity
-  useEffect(() => {
-    const logSessionActivity = async () => {
-      try {
-        await axios.put('http://127.0.0.1:8000/api/user-stats/activity');
-        if (fetchUser) fetchUser();
-      } catch (e) {
-        console.error("Failed to log activity:", e);
-      }
-    };
-    logSessionActivity();
-
-    const intervalId = setInterval(async () => {
-      try {
-        await axios.put('http://127.0.0.1:8000/api/user-stats/study-time', { seconds: 10 });
-      } catch (e) {
-        // Silently catch
-      }
-    }, 10000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [setId]);
-
-  const fetchSetData = async () => {
+  const fetchSetData = useCallback(async () => {
+    setLoading(true);
+    setLoadError('');
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/flashcard-sets');
-      const targetSet = res.data.find(s => s.id === parseInt(setId));
-      if (!targetSet) {
-        navigate('/dashboard');
-        return;
-      }
+      const res = await api.get(`/api/flashcard-sets/${setId}`);
+      const targetSet = res.data;
       setFlashcardSet(targetSet);
-      
+
       const mLevels = {};
       targetSet.flashcards.forEach(c => {
          mLevels[c.id] = c.mastery_level || 0;
@@ -97,19 +67,51 @@ export default function StudyMode() {
          return (mLevels[a.id] || 0) - (mLevels[b.id] || 0);
       });
       setCards(sortedCards);
-
-      setLoading(false);
     } catch (err) {
       console.error(err);
-      navigate('/dashboard');
+      setLoadError(getErrorMessage(err, 'Unable to load this study session.'));
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [setId]);
+
+  useEffect(() => {
+    fetchSetData();
+  }, [fetchSetData]);
+
+  // Track study session time and activity
+  useEffect(() => {
+    const logSessionActivity = async () => {
+      try {
+        await api.put('/api/user-stats/activity');
+        if (fetchUser) {
+          fetchUser().catch(err => console.warn('Failed to refresh user after activity log:', err));
+        }
+      } catch (e) {
+        console.error("Failed to log activity:", e);
+      }
+    };
+    logSessionActivity();
+
+    const intervalId = setInterval(async () => {
+      try {
+        await api.put('/api/user-stats/study-time', { seconds: 10 });
+      } catch (err) {
+        console.warn('Failed to log study time:', err);
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [setId, fetchUser]);
 
   // Cleanup synth if page unmounts or active mode changes
   useEffect(() => {
+    const synth = synthRef.current;
     if (activeMode !== 'podcast') {
-       if (synthRef.current.speaking) {
-         synthRef.current.cancel();
+       if (synth.speaking) {
+         synth.cancel();
          setIsPlaying(false);
        }
     }
@@ -129,7 +131,7 @@ export default function StudyMode() {
 
     
     return () => {
-      synthRef.current.cancel();
+      synth.cancel();
     }
   }, [activeMode, cards]);
 
@@ -150,13 +152,17 @@ export default function StudyMode() {
     }));
 
     try {
-      await axios.put(`http://127.0.0.1:8000/api/flashcard-sets/flashcards/${currentCard.id}/mastery`, {
+      await api.put(`/api/flashcard-sets/flashcards/${currentCard.id}/mastery`, {
         mastery_level: nextLevel
       });
       // Increment real-time studied cards tracker
-      await axios.put(`http://127.0.0.1:8000/api/user-stats/studied`);
-      if (fetchUser) fetchUser(); // Update context stat payload so dashboard updates live
-    } catch (err) {}
+      await api.put('/api/user-stats/studied');
+      if (fetchUser) {
+        fetchUser().catch(err => console.warn('Failed to refresh user after progress:', err));
+      }
+    } catch (err) {
+      console.warn('Failed to persist card progress:', err);
+    }
 
     if (currentIndex + 1 < cards.length) {
       setIsFlipped(false);
@@ -164,13 +170,6 @@ export default function StudyMode() {
     } else {
       setSessionComplete(true);
     }
-  };
-
-  const advanceTest = () => {
-    setMcSelected(null);
-    setFibInput('');
-    setFibEvaluated(null);
-    setTestIndex(prev => prev + 1);
   };
 
   const restartAll = () => {
@@ -326,6 +325,24 @@ export default function StudyMode() {
     </div>
   );
 
+  if (loadError || !flashcardSet) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-brand-bg px-4 text-center">
+        <BrainCircuit className="w-12 h-12 text-brand-primary mb-4" />
+        <h1 className="text-2xl font-bold mb-2 text-brand-text">Study session unavailable</h1>
+        <p className="text-brand-muted max-w-md mb-6">{loadError || 'This study set could not be found.'}</p>
+        <div className="flex gap-3">
+          <button onClick={fetchSetData} className="px-5 py-3 rounded-xl bg-brand-primary text-white font-bold">
+            Retry
+          </button>
+          <button onClick={() => navigate('/dashboard')} className="px-5 py-3 rounded-xl bg-brand-surface border border-brand-border text-brand-text font-bold">
+            Back to Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const mCounts = {0: 0, 1: 0, 2: 0, 3: 0};
   Object.values(masteryLevels).forEach(l => mCounts[l]++);
 
@@ -335,8 +352,6 @@ export default function StudyMode() {
   const blanksList = flashcardSet.fill_blanks || [];
   const shortList = flashcardSet.short_questions || [];
   const trueFalseList = flashcardSet.true_false || [];
-  const definitionsList = flashcardSet.definitions || [];
-
   return (
     <div className="min-h-screen flex bg-brand-bg relative">
       <aside className="w-64 fixed left-0 top-0 h-screen border-r border-brand-border bg-brand-surface pt-8 p-4 flex flex-col hidden md:flex z-10 overflow-y-auto">
@@ -535,16 +550,16 @@ export default function StudyMode() {
                     <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
                       <ReactMarkdown
                         components={{
-                          h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
-                          h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
-                          h3: ({node, ...props}) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
-                          p: ({node, ...props}) => <p className="text-brand-muted leading-relaxed text-lg mb-4" {...props} />,
-                          ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-muted text-lg ml-4" {...props} />,
-                          ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-muted text-lg ml-4" {...props} />,
-                          li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
-                          strong: ({node, ...props}) => <strong className="font-bold text-brand-primary" {...props} />,
-                          em: ({node, ...props}) => <em className="italic text-brand-text" {...props} />,
-                          blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />
+                            h1: (props) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                            h2: (props) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                            h3: (props) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
+                            p: (props) => <p className="text-brand-muted leading-relaxed text-lg mb-4" {...props} />,
+                            ul: (props) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-muted text-lg ml-4" {...props} />,
+                            ol: (props) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-muted text-lg ml-4" {...props} />,
+                            li: (props) => <li className="leading-relaxed" {...props} />,
+                            strong: (props) => <strong className="font-bold text-brand-primary" {...props} />,
+                            em: (props) => <em className="italic text-brand-text" {...props} />,
+                            blockquote: (props) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />
                         }}
                       >
                         {summary}
@@ -685,12 +700,16 @@ export default function StudyMode() {
                            quizList.forEach((q, i) => { if(quizAnswers[i] === q.correct_answer) score++; });
                            setQuizScore(score);
                            try {
-                             await axios.put('http://127.0.0.1:8000/api/user-stats/quiz');
-                             await axios.put('http://127.0.0.1:8000/api/user-stats/accuracy', {
+                             await api.put('/api/user-stats/quiz');
+                             await api.put('/api/user-stats/accuracy', {
                                 type: 'quiz', accuracy: Math.round(score/quizList.length * 100)
                              });
-                             if(fetchUser) fetchUser();
-                           } catch(e) {}
+                             if(fetchUser) {
+                               fetchUser().catch(err => console.warn('Failed to refresh user after quiz:', err));
+                             }
+                           } catch(err) {
+                             console.warn('Failed to persist quiz stats:', err);
+                           }
                         }}
                         disabled={Object.keys(quizAnswers).length < quizList.length}
                         className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all text-lg disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
@@ -764,11 +783,15 @@ export default function StudyMode() {
                                  if ((fibAnswers[i]||'').toLowerCase().trim() === b.blank_word.toLowerCase().trim()) score++;
                               });
                               try {
-                                 await axios.put('http://127.0.0.1:8000/api/user-stats/accuracy', {
+                                 await api.put('/api/user-stats/accuracy', {
                                     type: 'fill_blank', accuracy: Math.round(score/blanksList.length * 100)
                                  });
-                                 if(fetchUser) fetchUser();
-                              } catch(e) {}
+                                 if(fetchUser) {
+                                   fetchUser().catch(err => console.warn('Failed to refresh user after fill blanks:', err));
+                                 }
+                              } catch(err) {
+                                 console.warn('Failed to persist fill-in-the-blank stats:', err);
+                              }
                            }}
                            className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all text-lg"
                         >
@@ -843,13 +866,19 @@ export default function StudyMode() {
                               let score = 0;
                               trueFalseList.forEach((t, i) => { if (tfAnswers[i] === t.answer) score++; });
                               try {
-                                 await axios.put('http://127.0.0.1:8000/api/user-stats/accuracy', {
+                                 await api.put('/api/user-stats/accuracy', {
                                     type: 'true_false', accuracy: Math.round(score/trueFalseList.length * 100)
                                  });
-                                 if(fetchUser) fetchUser();
-                              } catch(e) {}
+                                 if(fetchUser) {
+                                   fetchUser().catch(err => console.warn('Failed to refresh user after true/false:', err));
+                                 }
+                              } catch(err) {
+                                 console.warn('Failed to persist true/false stats:', err);
+                              }
                            } else {
-                              if(fetchUser) fetchUser(); 
+                              if(fetchUser) {
+                                fetchUser().catch(err => console.warn('Failed to refresh user after true/false hide:', err));
+                              }
                            }
                         }}
                         className="px-8 py-4 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-2xl font-bold shadow-[0_0_15px_rgba(139,92,246,0.3)] transition-all text-lg flex items-center gap-2"
@@ -933,15 +962,15 @@ export default function StudyMode() {
                                 setIsGrading(true);
                                 try {
                                    const user_answers_arr = shortList.map((_, i) => writtenAnswers[i] || "I don't know");
-                                   const res = await axios.post("http://127.0.0.1:8000/api/grade-test", {
+                                   const res = await api.post("/api/grade-test", {
                                       questions: shortList,
                                       user_answers: user_answers_arr,
                                       context_text: flashcardSet.raw_content || ""
-                                   });
+                                   }, { longRunning: true });
                                    setWrittenGrading(res.data);
                                 } catch(e) {
                                    console.error(e);
-                                   alert("Failed to evaluate test.");
+                                   alert(getErrorMessage(e, "Failed to evaluate test."));
                                 } finally {
                                    setIsGrading(false);
                                 }
@@ -970,16 +999,16 @@ export default function StudyMode() {
                      <div className="text-left">
                         <ReactMarkdown
                           components={{
-                            h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
-                            h2: ({node, ...props}) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
-                            h3: ({node, ...props}) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
-                            p: ({node, ...props}) => <p className="text-brand-text leading-relaxed text-lg mb-4 font-medium" {...props} />,
-                            ul: ({node, ...props}) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-text text-lg ml-4" {...props} />,
-                            ol: ({node, ...props}) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-text text-lg ml-4" {...props} />,
-                            li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
-                            strong: ({node, ...props}) => <strong className="font-bold text-brand-primary" {...props} />,
-                            em: ({node, ...props}) => <em className="italic opacity-80" {...props} />,
-                            blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />
+                            h1: (props) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                            h2: (props) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                            h3: (props) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
+                            p: (props) => <p className="text-brand-text leading-relaxed text-lg mb-4 font-medium" {...props} />,
+                            ul: (props) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-text text-lg ml-4" {...props} />,
+                            ol: (props) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-text text-lg ml-4" {...props} />,
+                            li: (props) => <li className="leading-relaxed" {...props} />,
+                            strong: (props) => <strong className="font-bold text-brand-primary" {...props} />,
+                            em: (props) => <em className="italic opacity-80" {...props} />,
+                            blockquote: (props) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />
                           }}
                         >
                           {flashcardSet.tutor_lesson}

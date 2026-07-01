@@ -4,6 +4,7 @@ import logging
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 import hashlib
+import re
 
 load_dotenv()
 
@@ -48,6 +49,88 @@ FALLBACK_CONFIGS = [
     {"provider": "openrouter", "model": "meta-llama/llama-3-8b-instruct:free"},
     {"provider": "openrouter", "model": "google/gemma-2-9b-it:free"}
 ]
+AI_REQUEST_TIMEOUT_SECONDS = int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "45"))
+
+def _extract_sentences(text: str, limit: int = 15) -> list:
+    sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+', text.strip()) if len(s.strip()) > 20]
+    if sentences:
+        return sentences[:limit]
+    words = text.split()
+    return [" ".join(words[i:i + 18]).strip() for i in range(0, min(len(words), limit * 18), 18) if words[i:i + 18]]
+
+def _keywords(text: str, limit: int = 15) -> list:
+    stop_words = {
+        "about", "after", "again", "also", "because", "before", "being", "between", "could",
+        "during", "their", "there", "these", "those", "through", "under", "using", "which",
+        "while", "would", "with", "from", "into", "that", "this", "they", "were", "what",
+    }
+    seen = set()
+    terms = []
+    for match in re.finditer(r"\b[A-Za-z][A-Za-z-]{3,}\b", text):
+        term = match.group(0).strip(".,;:!?")
+        key = term.lower()
+        if key in stop_words or key in seen:
+            continue
+        seen.add(key)
+        terms.append(term)
+        if len(terms) >= limit:
+            break
+    return terms
+
+def _ensure_requested_modules(data: dict, text: str, modules: list) -> dict:
+    sentences = _extract_sentences(text)
+    terms = _keywords(text)
+    first_sentence = sentences[0] if sentences else text[:160].strip() or "The source material contains study information."
+
+    if "Flashcards" in modules and not data.get("flashcards"):
+        data["flashcards"] = [
+            {"question": f"What does the material say about {term}?", "answer": first_sentence, "difficulty": "easy"}
+            for term in (terms[:5] or ["the main topic"])
+        ]
+
+    if ("Multiple Choice (Quiz)" in modules or "Quiz" in modules) and not data.get("quiz"):
+        data["quiz"] = [{
+            "question": "Which statement is supported by the source material?",
+            "options": [first_sentence, "The material does not provide any study content.", "The topic is unrelated to the source.", "None of the above."],
+            "correct_answer": first_sentence,
+        }]
+
+    if "Fill-in-the-Blank" in modules and not data.get("fill_blanks"):
+        blanks = []
+        for term in terms[:10]:
+            pattern = re.compile(rf"\b{re.escape(term)}\b", re.IGNORECASE)
+            sentence = next((s for s in sentences if pattern.search(s)), first_sentence)
+            blanks.append({"sentence": pattern.sub("____", sentence, count=1), "blank_word": term})
+        data["fill_blanks"] = blanks
+
+    if "Written Test" in modules and not data.get("short_questions"):
+        data["short_questions"] = [f"Explain the importance of {term} in the source material." for term in (terms[:5] or ["the main topic"])]
+
+    if any(m in modules for m in ["True/False", "True / False", "True/False (Quiz)"]) and not data.get("true_false"):
+        true_items = [
+            {"statement": sentence, "answer": True, "explanation": "This statement is taken from the source material."}
+            for sentence in sentences[:5]
+        ]
+        data["true_false"] = true_items or [{
+            "statement": "The source material contains information that can be reviewed.",
+            "answer": True,
+            "explanation": "The uploaded or extracted text was used to build the study set."
+        }]
+
+    if "Notes" in modules and not data.get("summary"):
+        data["summary"] = "## Slide 1: Overview\n" + "\n".join(f"- {sentence}" for sentence in sentences[:6])
+        data["key_points"] = sentences[:5]
+
+    if "Tutor Lesson" in modules and not data.get("tutor_lesson"):
+        data["tutor_lesson"] = "# Topic Introduction\n" + first_sentence + "\n\n# Final Summary\nReview the key ideas from the source material and test yourself with the generated modes."
+
+    if "Podcast" in modules and not data.get("podcast_script"):
+        data["podcast_script"] = "Welcome to your Cognify study session. " + " ".join(sentences[:5])
+
+    if "definitions" not in data or not isinstance(data.get("definitions"), list):
+        data["definitions"] = []
+
+    return data
 
 async def _execute_with_fallback(messages: list, temperature: float = 0.5):
     """Executes a chat completion request across providers with fallback logic."""
@@ -60,10 +143,13 @@ async def _execute_with_fallback(messages: list, temperature: float = 0.5):
             
         try:
             client = clients[provider]
-            response = await client.chat.completions.create(
-                model=model_name,
-                messages=messages,
-                temperature=temperature
+            response = await asyncio.wait_for(
+                client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    temperature=temperature
+                ),
+                timeout=AI_REQUEST_TIMEOUT_SECONDS,
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -301,7 +387,10 @@ TEXT
             if provider == "groq" and ("llama-3" in model_name or "mixtral" in model_name):
                 api_kwargs["response_format"] = {"type": "json_object"}
                 
-            response = await client.chat.completions.create(**api_kwargs)
+            response = await asyncio.wait_for(
+                client.chat.completions.create(**api_kwargs),
+                timeout=AI_REQUEST_TIMEOUT_SECONDS,
+            )
             
             logger.info(f"{provider.upper()} API response received with model {model_name} for {modules}")
             result_content = response.choices[0].message.content
@@ -316,7 +405,6 @@ TEXT
             data = json.loads(clean_content)
             
             # Programmatic Deduplication for Fill-in-the-Blanks
-            import re
             if "fill_blanks" in data and isinstance(data["fill_blanks"], list):
                 unique_blanks = []
                 seen_answers = set()
@@ -394,9 +482,7 @@ async def generate_flashcards(text: str, card_type: str = "Standard", selected_m
         else:
             logger.error(f"Module generation group failed with error: {res}")
         
-    # Ensure definitions list exists so frontend doesn't crash if it was entirely omitted
-    if "definitions" not in final_data:
-        final_data["definitions"] = []
+    final_data = _ensure_requested_modules(final_data, text, modules)
             
     TEXT_CACHE[cache_key] = final_data
     

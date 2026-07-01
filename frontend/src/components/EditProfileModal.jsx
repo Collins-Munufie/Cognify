@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Upload, Loader2, User } from 'lucide-react';
-import axios from 'axios';
+import api, { getErrorMessage } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function EditProfileModal({ onClose }) {
@@ -36,7 +36,7 @@ export default function EditProfileModal({ onClose }) {
     setLoading(true);
     setError('');
     try {
-      await axios.put('http://127.0.0.1:8000/api/auth/me', {
+      await api.put('/api/auth/me', {
         full_name: fullName,
         profile_picture: profilePicture
       });
@@ -44,7 +44,7 @@ export default function EditProfileModal({ onClose }) {
       onClose();
     } catch (err) {
       console.error("Failed to update profile", err);
-      setError("Failed to update profile. Please try again.");
+      setError(getErrorMessage(err, "Failed to update profile. Please try again."));
     } finally {
       setLoading(false);
     }

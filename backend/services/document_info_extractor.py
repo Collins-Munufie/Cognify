@@ -6,16 +6,23 @@ import logging
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 import os
+import asyncio
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
 api_key = os.getenv("GROQ_API_KEY")
-client = AsyncOpenAI(
-    api_key=api_key,
-    base_url="https://api.groq.com/openai/v1"
-)
+AI_REQUEST_TIMEOUT_SECONDS = int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "45"))
+
+def _fallback_document_info(text: str):
+    return {
+        "title": "Document Information",
+        "summary": "Unable to extract summary. Please review the document directly.",
+        "key_concepts": [],
+        "key_points": [],
+        "word_count": len(text.split())
+    }
 
 async def extract_document_info(text: str):
     """
@@ -23,6 +30,14 @@ async def extract_document_info(text: str):
     Returns: dict with title, summary, key_concepts, and key_points
     """
     logger.info("Extracting document information...")
+    if not api_key:
+        logger.warning("GROQ_API_KEY not found. Returning fallback document info.")
+        return _fallback_document_info(text)
+
+    client = AsyncOpenAI(
+        api_key=api_key,
+        base_url="https://api.groq.com/openai/v1"
+    )
     
     prompt = f"""
     Analyze the following document and extract key information in JSON format.
@@ -56,14 +71,17 @@ async def extract_document_info(text: str):
     for model_name in models_to_try:
         try:
             logger.info(f"Extracting info with model: {model_name}")
-            response = await client.chat.completions.create(
-                model=model_name,
-                messages=[
-                    {"role": "system", "content": "You are a JSON-only API. Always return valid JSON only."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.5,
-                max_tokens=500
+            response = await asyncio.wait_for(
+                client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": "You are a JSON-only API. Always return valid JSON only."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.5,
+                    max_tokens=500
+                ),
+                timeout=AI_REQUEST_TIMEOUT_SECONDS,
             )
             
             result_content = response.choices[0].message.content
@@ -85,10 +103,4 @@ async def extract_document_info(text: str):
     
     # Fallback if all models fail
     logger.error("All models failed for extraction, returning minimal info")
-    return {
-        "title": "Document Information",
-        "summary": "Unable to extract summary. Please review the document directly.",
-        "key_concepts": [],
-        "key_points": [],
-        "word_count": len(text.split())
-    }
+    return _fallback_document_info(text)

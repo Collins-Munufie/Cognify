@@ -1,15 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Loader2, Play, Plus, BookOpen, Download, Database, CheckCircle2, TrendingUp, Compass, Target, Hash, CheckSquare, Layers, Clock, ArrowRight, Trash2, Edit2, UserCircle, Mail, LogOut, X, Settings, Activity, Flame, Calendar, Zap, AlertTriangle, Check, Cpu, RefreshCw } from 'lucide-react';
 import Logo from './Logo';
 import EditProfileModal from './EditProfileModal';
-import axios from 'axios';
+import api, { getErrorMessage } from '../lib/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell } from 'recharts';
 
 export default function Dashboard() {
-  const { user, fetchUser, logout } = useAuth();
+  const { user, fetchUser, logout, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,38 +18,44 @@ export default function Dashboard() {
   const [renameModal, setRenameModal] = useState({ open: false, id: null, title: '' });
   const [editProfileOpen, setEditProfileOpen] = useState(false);
   const [activityData, setActivityData] = useState([]);
+  const [error, setError] = useState('');
 
-  const fetchActivity = async () => {
+  const fetchActivity = useCallback(async () => {
     try {
-      const res = await axios.get('http://127.0.0.1:8000/api/user-stats/activity/weekly');
+      const res = await api.get('/api/user-stats/activity/weekly');
       setActivityData(res.data);
-    } catch(e) {}
-  };
+    } catch(err) {
+      console.warn('Failed to load weekly activity:', err);
+      setActivityData([]);
+    }
+  }, []);
+
+  const fetchSets = useCallback(async () => {
+    try {
+      const res = await api.get('/api/flashcard-sets');
+      setSets(res.data);
+    } catch (err) {
+      console.error(err);
+      setError(getErrorMessage(err, 'Unable to load your dashboard. Please refresh or try again later.'));
+      setSets([]);
+    }
+  }, []);
 
   // Poll for latest stats on load
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       navigate('/');
       return;
     }
     const bootstrap = async () => {
-       await fetchUser();
-       await fetchSets();
-       await fetchActivity();
+       setLoading(true);
+       setError('');
+       await Promise.allSettled([fetchSets(), fetchActivity()]);
+       setLoading(false);
     };
     bootstrap();
-  }, [user?.email]); // don't infinitely re-render
-
-  const fetchSets = async () => {
-    try {
-      const res = await axios.get('http://127.0.0.1:8000/api/flashcard-sets');
-      setSets(res.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [authLoading, user, navigate, fetchActivity, fetchSets]);
 
   const handleLogout = () => {
     logout();
@@ -58,33 +64,41 @@ export default function Dashboard() {
   
   const handleDeleteSet = async (id) => {
      try {
-        await axios.delete(`http://127.0.0.1:8000/api/flashcard-sets/${id}`);
+        await api.delete(`/api/flashcard-sets/${id}`);
         setDeleteConfirmId(null);
         await fetchSets();
-        if(fetchUser) fetchUser();
+        if(fetchUser) {
+          fetchUser().catch(err => console.warn('Failed to refresh user after delete:', err));
+        }
      } catch (e) {
         console.error(e);
+        setError(getErrorMessage(e, 'Failed to delete the study set.'));
      }
   };
 
   const handleRenameSet = async () => {
      if (!renameModal.title.trim()) return;
      try {
-        await axios.put(`http://127.0.0.1:8000/api/flashcard-sets/${renameModal.id}/title`, { title: renameModal.title });
+        await api.put(`/api/flashcard-sets/${renameModal.id}/title`, { title: renameModal.title });
         setRenameModal({ open: false, id: null, title: '' });
         await fetchSets();
      } catch (e) {
         console.error(e);
+        setError(getErrorMessage(e, 'Failed to rename the study set.'));
      }
   };
   
   const handleContinue = async (set) => {
     try {
-       await axios.put(`http://127.0.0.1:8000/api/flashcard-sets/${set.id}/access`);
-    } catch(e) {}
+       await api.put(`/api/flashcard-sets/${set.id}/access`);
+    } catch(err) {
+       console.warn('Failed to update access timestamp:', err);
+    }
     try {
-       await axios.put('http://127.0.0.1:8000/api/user-stats/activity');
-    } catch(e) {}
+       await api.put('/api/user-stats/activity');
+    } catch(err) {
+       console.warn('Failed to log dashboard activity:', err);
+    }
     navigate(`/study/${set.id}`);
   }
 
@@ -92,12 +106,7 @@ export default function Dashboard() {
 
   // Structured Data Architecture (as requested)
   const dashboardData = useMemo(() => {
-    let totalCards = 0;
-    let masteredCards = 0;
-    let mostRecentParsed = null;
-
-    // Generated study modes distribution counts
-    const modeCounts = {
+    const emptyModeCounts = {
       Notes: 0,
       Flashcards: 0,
       Podcast: 0,
@@ -109,41 +118,44 @@ export default function Dashboard() {
       Content: 0,
     };
 
-    const mappedSets = sets.map(set => {
+    const summary = sets.reduce((acc, set) => {
       const mastered = set.flashcards.filter(c => c.mastery_level === 3).length;
-      totalCards += set.flashcards.length;
-      masteredCards += mastered;
-      
       const setPercent = set.flashcards.length > 0 ? Math.round((mastered / set.flashcards.length) * 100) : 0;
-      
-      // Calculate generated modes
       const generatedModes = [];
-      if (set.summary) { generatedModes.push("Notes"); modeCounts.Notes++; }
-      if (set.flashcards && set.flashcards.length > 0) { generatedModes.push("Flashcards"); modeCounts.Flashcards++; }
-      if (set.podcast_script) { generatedModes.push("Podcast"); modeCounts.Podcast++; }
-      if (set.quiz && set.quiz.length > 0) { generatedModes.push("Quiz"); modeCounts.Quiz++; }
-      if (set.fill_blanks && set.fill_blanks.length > 0) { generatedModes.push("Fill-Blanks"); modeCounts["Fill-in-the-Blank"]++; }
-      if (set.short_questions && set.short_questions.length > 0) { generatedModes.push("Written"); modeCounts["Written Test"]++; }
-      if (set.true_false && set.true_false.length > 0) { generatedModes.push("True/False"); modeCounts["True/False"]++; }
-      if (set.tutor_lesson) { generatedModes.push("Tutor"); modeCounts["Tutor Lesson"]++; }
+      const modeCounts = { ...acc.modeCounts };
+
+      if (set.summary) { generatedModes.push("Notes"); modeCounts.Notes += 1; }
+      if (set.flashcards && set.flashcards.length > 0) { generatedModes.push("Flashcards"); modeCounts.Flashcards += 1; }
+      if (set.podcast_script) { generatedModes.push("Podcast"); modeCounts.Podcast += 1; }
+      if (set.quiz && set.quiz.length > 0) { generatedModes.push("Quiz"); modeCounts.Quiz += 1; }
+      if (set.fill_blanks && set.fill_blanks.length > 0) { generatedModes.push("Fill-Blanks"); modeCounts["Fill-in-the-Blank"] += 1; }
+      if (set.short_questions && set.short_questions.length > 0) { generatedModes.push("Written"); modeCounts["Written Test"] += 1; }
+      if (set.true_false && set.true_false.length > 0) { generatedModes.push("True/False"); modeCounts["True/False"] += 1; }
+      if (set.tutor_lesson) { generatedModes.push("Tutor"); modeCounts["Tutor Lesson"] += 1; }
       if (set.definitions && set.definitions.length > 0) { generatedModes.push("Definitions"); }
-      if (set.raw_content) { generatedModes.push("Content"); modeCounts.Content++; }
+      if (set.raw_content) { generatedModes.push("Content"); modeCounts.Content += 1; }
       
-      let lastTime = new Date(set.last_accessed || set.created_at).getTime();
-      return {
+      const lastTime = new Date(set.last_accessed || set.created_at).getTime();
+      const mappedSet = {
          ...set,
          progressPercent: setPercent,
          generatedModes: generatedModes,
          unixTime: lastTime
-      }
-    }).sort((a,b) => b.unixTime - a.unixTime); // Sort by most recent
+      };
 
-    if (mappedSets.length > 0) {
-      mostRecentParsed = mappedSets[0];
-    }
+      return {
+        totalCards: acc.totalCards + set.flashcards.length,
+        masteredCards: acc.masteredCards + mastered,
+        modeCounts,
+        mappedSets: [...acc.mappedSets, mappedSet],
+      };
+    }, { totalCards: 0, masteredCards: 0, modeCounts: emptyModeCounts, mappedSets: [] });
+
+    const mappedSets = summary.mappedSets.sort((a,b) => b.unixTime - a.unixTime);
+    const mostRecentParsed = mappedSets[0] || null;
     
     // Overall Mastery based on DB state + frontend map
-    const calculatedMastery = totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0;
+    const calculatedMastery = summary.totalCards > 0 ? Math.round((summary.masteredCards / summary.totalCards) * 100) : 0;
 
     const completedSetsCount = mappedSets.filter(set => set.progressPercent === 100).length;
     const weeklySessionsCount = activityData.reduce((acc, curr) => acc + (curr.sessions || 0), 0);
@@ -155,7 +167,7 @@ export default function Dashboard() {
     const aiCompRate = user?.stats?.success_generations > 0 ? 100.0 : 0.0;
     const procAccuracy = user?.stats?.success_generations > 0 ? 99.4 : 100.0;
 
-    const modeCountsArray = Object.entries(modeCounts)
+    const modeCountsArray = Object.entries(summary.modeCounts)
       .map(([name, count]) => ({ name, count }))
       .filter(item => item.count > 0);
 
@@ -299,6 +311,12 @@ export default function Dashboard() {
                <p className="text-brand-muted text-lg">Here is an overview of your active learning progress.</p>
             </div>
          </div>
+
+         {error && (
+            <div className="mb-8 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400">
+               {error}
+            </div>
+         )}
 
          {/* 2. LEARNING OVERVIEW (TOP CARDS) */}
          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
