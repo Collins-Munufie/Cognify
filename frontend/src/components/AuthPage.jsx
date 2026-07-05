@@ -59,8 +59,30 @@ export default function AuthPage() {
         </p>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-sm mb-6 text-center">
-            {error}
+          <div className="mb-6 flex flex-col gap-3">
+            <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-sm text-center">
+              {error}
+            </div>
+            
+            {(error.includes("Connection Failed") || error.includes("reach the server")) && (
+              <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-4 text-xs text-brand-muted relative overflow-hidden text-left">
+                <div className="absolute top-0 left-0 w-1 h-full bg-amber-500/50"></div>
+                <h4 className="font-bold text-amber-400 mb-2 flex items-center gap-1.5">
+                  ⚠️ Backend Connection Checklist
+                </h4>
+                <ul className="list-decimal pl-4 space-y-1.5">
+                  <li>
+                    <strong>Start the Server:</strong> Verify you ran <code className="bg-black/30 px-1 py-0.5 rounded text-amber-300">uvicorn main:app --reload</code> in the <code className="bg-black/30 px-1.5 py-0.5 rounded">backend</code> directory.
+                  </li>
+                  <li>
+                    <strong>Verify Endpoint URL:</strong> Ensure the backend is running at <code className="text-amber-300">http://127.0.0.1:8000</code> (or check your custom <code className="text-amber-300">VITE_API_BASE_URL</code> config).
+                  </li>
+                  <li>
+                    <strong>Check CORS / logs:</strong> Open browser developer tools (F12) Console tab to inspect specific CORS or connection refused errors.
+                  </li>
+                </ul>
+              </div>
+            )}
           </div>
         )}
 

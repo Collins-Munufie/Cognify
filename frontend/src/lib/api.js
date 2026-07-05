@@ -49,11 +49,38 @@ api.interceptors.response.use(
 );
 
 export const getErrorMessage = (error, fallback = 'Something went wrong. Please try again.') => {
+  if (!error) return fallback;
+
+  // Handle request timeout
   if (error.code === 'ECONNABORTED') {
-    return 'The request took too long. Please check your connection and try again.';
+    return 'The request took too long. Please check your network connection and try again.';
   }
 
-  return error.response?.data?.detail || error.message || fallback;
+  // Handle network connectivity or CORS errors
+  const isNetworkError = 
+    error.message === 'Network Error' || 
+    error.code === 'ERR_NETWORK' ||
+    (error.request && !error.response);
+
+  if (isNetworkError) {
+    const endpoint = error.config?.url ? ` (endpoint: ${error.config.url})` : '';
+    return `Connection Failed${endpoint}: Unable to reach the server. Please ensure the backend service is running (usually at http://127.0.0.1:8000) and your API URL is correctly configured.`;
+  }
+
+  // Handle backend error details
+  if (error.response?.data?.detail) {
+    const detail = error.response.data.detail;
+    if (typeof detail === 'string') {
+      return detail;
+    }
+    if (Array.isArray(detail)) {
+      // Parse FastAPI Pydantic validation errors
+      return detail.map(err => `${err.loc?.slice(1).join('.') || 'input'}: ${err.msg}`).join(', ');
+    }
+    return JSON.stringify(detail);
+  }
+
+  return error.message || fallback;
 };
 
 export default api;
