@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import Flashcard from './Flashcard';
+import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, CheckCircle, BookOpen, Layers, CheckSquare, Edit3, HelpCircle, ExternalLink } from 'lucide-react';
 
 export default function FlashcardList({ flashcards, setFlashcards, onReset, completeStudySet, savedSetId }) {
@@ -114,19 +115,31 @@ export default function FlashcardList({ flashcards, setFlashcards, onReset, comp
           >
             {completeStudySet.summary && (
               <div>
-                <h3 className="text-xl font-bold text-brand-primary mb-3">Summary</h3>
-                <p className="text-brand-text leading-relaxed">{completeStudySet.summary}</p>
-              </div>
-            )}
-            
-            {completeStudySet.key_points?.length > 0 && (
-              <div>
-                <h3 className="text-xl font-bold text-brand-primary mb-3">Key Points</h3>
-                <ul className="list-disc pl-6 space-y-2">
-                  {completeStudySet.key_points.map((pt, i) => (
-                    <li key={i} className="text-brand-text">{pt}</li>
-                  ))}
-                </ul>
+                <h3 className="text-xl font-bold text-brand-primary mb-3">Study Notes</h3>
+                <div className="prose prose-invert max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      h1: (props) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                      h2: (props) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
+                      h3: (props) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
+                      h4: (props) => <h4 className="text-lg font-bold mt-4 mb-2 text-brand-text" {...props} />,
+                      p: (props) => <p className="text-brand-muted leading-relaxed text-base mb-4" {...props} />,
+                      ul: (props) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-muted text-base ml-4" {...props} />,
+                      ol: (props) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-muted text-base ml-4" {...props} />,
+                      li: (props) => <li className="leading-relaxed" {...props} />,
+                      strong: (props) => <strong className="font-bold text-brand-primary" {...props} />,
+                      em: (props) => <em className="italic text-brand-text" {...props} />,
+                      blockquote: (props) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />,
+                      table: (props) => <div className="overflow-x-auto mb-4"><table className="w-full border-collapse border border-brand-border" {...props} /></div>,
+                      thead: (props) => <thead className="bg-brand-surface" {...props} />,
+                      th: (props) => <th className="border border-brand-border px-4 py-2 text-left font-bold text-brand-text" {...props} />,
+                      td: (props) => <td className="border border-brand-border px-4 py-2 text-brand-muted" {...props} />,
+                      code: (props) => <code className="bg-brand-bg px-1.5 py-0.5 rounded text-sm font-mono text-brand-primary" {...props} />,
+                    }}
+                  >
+                    {completeStudySet.summary}
+                  </ReactMarkdown>
+                </div>
               </div>
             )}
 
