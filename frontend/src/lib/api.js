@@ -64,7 +64,13 @@ export const getErrorMessage = (error, fallback = 'Something went wrong. Please 
 
   if (isNetworkError) {
     const endpoint = error.config?.url ? ` (endpoint: ${error.config.url})` : '';
-    return `Connection Failed${endpoint}: Unable to reach the server. Please ensure the backend service is running (usually at http://127.0.0.1:8000) and your API URL is correctly configured.`;
+    let msg = `Connection Failed${endpoint}: Unable to reach the server. Please ensure the backend service is running (usually at http://127.0.0.1:8000) and your API URL is correctly configured.`;
+    
+    if (window.location.protocol === 'https:' && API_BASE_URL.startsWith('http:')) {
+      msg += ` (Mixed Content Block: Your website is loaded over HTTPS, but trying to access an insecure HTTP API at ${API_BASE_URL}. Secure pages cannot access insecure APIs unless run locally.)`;
+    }
+    
+    return msg;
   }
 
   // Handle backend error details

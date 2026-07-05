@@ -77,6 +77,11 @@ export default function AuthPage() {
                   <li>
                     <strong>Verify Endpoint URL:</strong> Ensure the backend is running at <code className="text-amber-300">http://127.0.0.1:8000</code> (or check your custom <code className="text-amber-300">VITE_API_BASE_URL</code> config).
                   </li>
+                  {error.includes("Mixed Content") && (
+                    <li className="text-red-400 font-semibold bg-red-950/20 p-2 rounded-lg border border-red-500/10">
+                      <strong>Mixed Content Block:</strong> Your website is loaded over HTTPS (Vercel), but trying to access an insecure HTTP API. Secure pages cannot access insecure APIs unless run locally (e.g. run frontend locally via npm).
+                    </li>
+                  )}
                   <li>
                     <strong>Check CORS / logs:</strong> Open browser developer tools (F12) Console tab to inspect specific CORS or connection refused errors.
                   </li>
