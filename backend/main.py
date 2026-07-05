@@ -34,10 +34,25 @@ class SelectiveGenerationRequest(BaseModel):
     modules: List[str]
     title: str = "Generated Content"
 
-# Allow requests from the React frontend
+# Allow requests from the React frontend (CORS configuration)
+# Note: Wildcard "*" cannot be used with allow_credentials=True.
+allowed_origins_env = os.environ.get("ALLOWED_ORIGINS", "")
+allowed_origins = [origin.strip() for origin in allowed_origins_env.split(",") if origin.strip()]
+
+# Default local development origins
+default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+# Merge unique origins
+origins = list(set(default_origins + allowed_origins))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all during dev
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
