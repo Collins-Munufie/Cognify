@@ -50,9 +50,13 @@ default_origins = [
 # Merge unique origins
 origins = list(set(default_origins + allowed_origins))
 
+# Regex to allow all localhost/127.0.0.1 ports and Vercel deployments (including branch/preview deployments)
+allow_origin_regex = r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https?://.*\.vercel\.app|https?://.*\.github\.io"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
