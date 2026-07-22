@@ -1,6 +1,17 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  // Default to relative path on HTTPS to avoid Mixed Content, but default to localhost on HTTP
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    return '';
+  }
+  return 'http://127.0.0.1:8000';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 const DEFAULT_TIMEOUT_MS = 15000;
 const LONG_TIMEOUT_MS = 120000;
 
@@ -66,8 +77,12 @@ export const getErrorMessage = (error, fallback = 'Something went wrong. Please 
     const endpoint = error.config?.url ? ` (endpoint: ${error.config.url})` : '';
     let msg = `Connection Failed${endpoint}: Unable to reach the server. Please ensure the backend service is running (usually at http://127.0.0.1:8000) and your API URL is correctly configured.`;
     
-    if (window.location.protocol === 'https:' && API_BASE_URL.startsWith('http:')) {
-      msg += ` (Mixed Content Block: Your website is loaded over HTTPS, but trying to access an insecure HTTP API at ${API_BASE_URL}. Secure pages cannot access insecure APIs unless run locally.)`;
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+      if (!import.meta.env.VITE_API_BASE_URL) {
+        msg += ` (Missing Configuration: The VITE_API_BASE_URL environment variable is not defined. Secure HTTPS pages require a secure backend API endpoint.)`;
+      } else if (API_BASE_URL.startsWith('http:')) {
+        msg += ` (Mixed Content Block: Your website is loaded over HTTPS, but trying to access an insecure HTTP API at ${API_BASE_URL}. Secure pages cannot access insecure APIs unless run locally.)`;
+      }
     }
     
     return msg;

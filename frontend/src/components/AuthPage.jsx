@@ -82,6 +82,11 @@ export default function AuthPage() {
                       <strong>Mixed Content Block:</strong> Your website is loaded over HTTPS (Vercel), but trying to access an insecure HTTP API. Secure pages cannot access insecure APIs unless run locally (e.g. run frontend locally via npm).
                     </li>
                   )}
+                  {error.includes("Missing Configuration") && (
+                    <li className="text-amber-400 font-semibold bg-amber-950/20 p-2 rounded-lg border border-amber-500/10">
+                      <strong>Missing API URL Configuration:</strong> Your website is running over HTTPS, but no backend API URL is configured. Please set the <code className="text-amber-300">VITE_API_BASE_URL</code> environment variable in your hosting platform dashboard (e.g. Vercel) to point to your secure (HTTPS) backend server.
+                    </li>
+                  )}
                   <li>
                     <strong>Check CORS / logs:</strong> Open browser developer tools (F12) Console tab to inspect specific CORS or connection refused errors.
                   </li>

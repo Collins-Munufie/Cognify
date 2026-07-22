@@ -539,11 +539,12 @@ def _ensure_requested_modules(data: dict, text: str, modules: list) -> dict:
                     "explanation": "This statement is directly supported by the source material."
                 })
             else:
-                words = sentence.split()
-                if len(words) > 5:
-                    flip_idx = random.randint(1, min(4, len(words) - 2))
-                    words[flip_idx] = "not " + words[flip_idx] if not words[flip_idx].startswith("not ") else words[flip_idx].replace("not ", "", 1)
-                    false_statement = " ".join(words).rstrip(".!?") + "."
+                sentence_clean = sentence.rstrip(".!?")
+                verb_pattern = re.search(r'\b(is|are|was|were|has|have|had|can|could|will|would|shall|should|may|might|must|does|do|contains|includes|refers|produces|requires|uses|follows|involves|creates|forms|consists|comprises|depends|relates|applies|occurs|takes|gives|shows|represents|describes|defines|illustrates|demonstrates|indicates)\b', sentence_clean, re.IGNORECASE)
+                if verb_pattern and len(sentence_clean.split()) > 5:
+                    verb = verb_pattern.group(1)
+                    negated = f"does not {verb}" if verb.lower() in ("does", "contains", "includes", "refers", "produces", "requires", "uses", "follows", "involves", "creates", "forms", "consists", "comprises", "depends", "relates", "applies", "occurs", "takes", "gives", "shows", "represents", "describes", "defines", "illustrates", "demonstrates", "indicates") else f"{verb} not"
+                    false_statement = sentence_clean.replace(verb, negated, 1).rstrip(".!?") + "."
                     false_items.append({
                         "statement": false_statement,
                         "answer": False,
@@ -551,7 +552,7 @@ def _ensure_requested_modules(data: dict, text: str, modules: list) -> dict:
                     })
                 else:
                     true_items.append({
-                        "statement": sentence.rstrip(".!?") + ".",
+                        "statement": sentence_clean + ".",
                         "answer": True,
                         "explanation": "This statement is directly supported by the source material."
                     })
@@ -751,16 +752,16 @@ WRITTEN TEST RULES (ESSAY/LONG-ANSWER QUESTIONS)
 TRUE/FALSE RULES
 ----------------------------------------
 - Generate meaningful, academic True/False statements that test understanding of key concepts.
-- EVERY statement must be objectively verifiable as TRUE or FALSE based solely on the source material.
-- Include a clear, specific explanation for each answer citing the reasoning from the material.
+- EVERY statement must be DIRECTLY DERIVED from a specific claim in the source material and objectively verifiable as TRUE or FALSE based solely on that material.
+- Include a clear, specific explanation for each answer that cites the relevant reasoning from the material.
 - Cover DIFFERENT major topics from the document. NO TWO statements should test the same concept.
-- Be specific to the uploaded educational material; avoid generic or trivial statements.
+- Be SPECIFIC to the uploaded educational material. NO generic statements that could apply to any topic (e.g., avoid "This topic is important" or "This concept has many applications").
 - Do NOT reference structural layout elements.
 - Ensure a BALANCED mix of roughly 50% True and 50% False statements.
 - Each statement must be DISTINCT — if two statements test overlapping knowledge, regenerate one.
 - Aim for breadth: statements should span the full range of the material, not focus on one area.
 - Every statement must be HIGH-QUALITY: precise, clearly worded, and academically rigorous.
-- False statements must be PLAUSIBLE — they should look like they could be true but contain a specific factual error.
+- False statements must be PLAUSIBLE and RELEVANT — they should be a modified version of a true claim from the material (e.g., changing a key detail), not a fabricated unrelated statement.
 - Example: {"statement": "The Bresenham algorithm uses only integer arithmetic.", "answer": true, "explanation": "Bresenham's line algorithm was designed to use only integer addition, subtraction, and bit shifting."}
 - Output as a list of objects in the "true_false" field.
 
