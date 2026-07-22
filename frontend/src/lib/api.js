@@ -62,6 +62,15 @@ api.interceptors.response.use(
 export const getErrorMessage = (error, fallback = 'Something went wrong. Please try again.') => {
   if (!error) return fallback;
 
+  // Handle routing / static page fallback issues (404/405) in production
+  const isRelativeApi = !import.meta.env.VITE_API_BASE_URL || API_BASE_URL === '';
+  const isRoutingError = error.response && (error.response.status === 404 || error.response.status === 405);
+  
+  if (isRoutingError && isRelativeApi && typeof window !== 'undefined' && window.location.protocol === 'https:') {
+    const endpoint = error.config?.url ? ` (endpoint: ${error.config.url})` : '';
+    return `Connection Failed${endpoint} (Status ${error.response.status}): The backend API is not configured on this domain. (Missing Configuration: The VITE_API_BASE_URL environment variable is not defined. Secure HTTPS pages require a secure backend API endpoint.)`;
+  }
+
   // Handle request timeout
   if (error.code === 'ECONNABORTED') {
     return 'The request took too long. Please check your network connection and try again.';
