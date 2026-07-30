@@ -21,6 +21,7 @@ export default function StudyMode() {
   const [sessionComplete, setSessionComplete] = useState(false);
   
   const [activeMode, setActiveMode] = useState('notes');
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [podcastVoice, setPodcastVoice] = useState('Conversational Mode');
 
   const { fetchUser } = useAuth(); // AuthContext to refresh stats
@@ -354,6 +355,139 @@ export default function StudyMode() {
   const trueFalseList = flashcardSet.true_false || [];
   return (
     <div className="min-h-screen flex bg-brand-bg relative">
+      {/* Mobile Sticky Header and Nav Bar */}
+      <div className="fixed top-0 left-0 right-0 z-20 flex flex-col bg-brand-surface/95 backdrop-blur-md border-b border-brand-border md:hidden">
+        <header className="h-14 flex items-center justify-between px-4">
+          <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 text-brand-muted hover:text-brand-text flex items-center justify-center rounded-lg">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <span className="font-bold text-brand-text text-base truncate max-w-[60%]">
+            {flashcardSet?.title}
+          </span>
+          <button 
+            onClick={() => setMobileChatOpen(true)} 
+            className="p-2 -mr-2 text-brand-primary hover:text-brand-primary-hover flex items-center justify-center rounded-lg"
+            title="Ask AI Study Buddy"
+          >
+            <BrainCircuit className="w-6 h-6" />
+          </button>
+        </header>
+        
+        {/* Horizontal scroll of study modes */}
+        <nav className="flex gap-2 overflow-x-auto px-4 py-2 border-t border-brand-border/60 scrollbar-none whitespace-nowrap">
+          <button 
+            onClick={() => setActiveMode('notes')} 
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+              activeMode === 'notes' 
+                ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+          >
+            <AlignLeft className="w-3.5 h-3.5" /> <span>Notes</span>
+          </button>
+          
+          {quizList.length > 0 && (
+            <button 
+              onClick={() => setActiveMode('multiple_choice')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+                activeMode === 'multiple_choice' 
+                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <Target className="w-3.5 h-3.5" /> <span>Multiple Choice</span>
+            </button>
+          )}
+          
+          <button 
+            onClick={() => setActiveMode('flashcards')} 
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+              activeMode === 'flashcards' 
+                ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" /> <span>Flashcards</span>
+          </button>
+          
+          <button 
+            onClick={() => setActiveMode('podcast')} 
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+              activeMode === 'podcast' 
+                ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+            }`}
+          >
+            <Headphones className="w-3.5 h-3.5" /> <span>Podcast</span>
+          </button>
+          
+          {blanksList.length > 0 && (
+            <button 
+              onClick={() => setActiveMode('fill_blanks')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+                activeMode === 'fill_blanks' 
+                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <Type className="w-3.5 h-3.5" /> <span>Fill-in-the-Blank</span>
+            </button>
+          )}
+          
+          {shortList.length > 0 && (
+            <button 
+              onClick={() => setActiveMode('written_test')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+                activeMode === 'written_test' 
+                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" /> <span>Written Test</span>
+            </button>
+          )}
+          
+          {trueFalseList.length > 0 && (
+            <button 
+              onClick={() => setActiveMode('true_false')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+                activeMode === 'true_false' 
+                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" /> <span>True / False</span>
+            </button>
+          )}
+          
+          {flashcardSet?.tutor_lesson && (
+            <button 
+              onClick={() => setActiveMode('tutor_lesson')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+                activeMode === 'tutor_lesson' 
+                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <BrainCircuit className="w-3.5 h-3.5" /> <span>Tutor Lesson</span>
+            </button>
+          )}
+          
+          {flashcardSet?.raw_content && (
+            <button 
+              onClick={() => setActiveMode('content')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+                activeMode === 'content' 
+                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <AlignLeft className="w-3.5 h-3.5" /> <span>Content</span>
+            </button>
+          )}
+        </nav>
+      </div>
+
       <aside className="w-64 fixed left-0 top-0 h-screen border-r border-brand-border bg-brand-surface pt-8 p-4 flex flex-col hidden md:flex z-10 overflow-y-auto">
          <div className="flex items-center gap-2 mb-8 cursor-pointer" onClick={() => navigate('/dashboard')}>
            <ChevronLeft className="w-5 h-5 text-brand-muted" />
@@ -405,7 +539,7 @@ export default function StudyMode() {
          </div>
       </aside>
 
-      <main className="flex-1 md:pl-64 lg:pr-96 flex flex-col items-center pt-8 px-4 relative min-h-screen">
+      <main className="flex-1 md:pl-64 lg:pr-96 flex flex-col items-center pt-28 md:pt-8 px-4 relative min-h-screen">
         <div className="w-full max-w-4xl flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-4 overflow-x-auto">
           <div className="flex gap-2 min-w-max">
             {[0,1,2,3].map(level => (
@@ -1042,6 +1176,46 @@ export default function StudyMode() {
       <aside className="w-96 fixed right-0 top-0 h-screen hidden lg:flex items-center p-6 bg-brand-bg/50 backdrop-blur-md border-l border-brand-border z-10">
          <StudyChat rawContent={flashcardSet?.raw_content || ""} />
       </aside>
+
+      {/* Mobile Chat Slide-over Drawer */}
+      <AnimatePresence>
+        {mobileChatOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileChatOpen(false)}
+              className="fixed inset-0 bg-black z-30 lg:hidden"
+            />
+            {/* Drawer */}
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-brand-bg shadow-2xl border-l border-brand-border z-40 p-4 flex flex-col lg:hidden"
+            >
+              <div className="flex items-center justify-between mb-4 border-b border-brand-border pb-3">
+                <div className="flex items-center gap-2">
+                  <BrainCircuit className="w-6 h-6 text-brand-primary" />
+                  <span className="font-bold text-brand-text">AI Study Buddy</span>
+                </div>
+                <button 
+                  onClick={() => setMobileChatOpen(false)}
+                  className="p-2 text-brand-muted hover:text-brand-text bg-brand-surface border border-brand-border rounded-xl"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden flex flex-col">
+                <StudyChat rawContent={flashcardSet?.raw_content || ""} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
     </div>
   );
