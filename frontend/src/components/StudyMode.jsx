@@ -1249,6 +1249,24 @@ export default function StudyMode() {
         )}
       </AnimatePresence>
 
+      {/* Floating Action Button (FAB) for AI Assistant (visible on < 1024px where right sidebar is hidden) */}
+      <div className="fixed bottom-6 right-6 z-30 lg:hidden">
+        <button
+          onClick={() => setMobileChatOpen(true)}
+          className="w-14 h-14 bg-brand-primary text-white rounded-full shadow-[0_4px_25px_rgba(139,92,246,0.5)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all relative border border-brand-primary-hover group"
+          title="Ask AI Study Buddy"
+        >
+          {/* Pulsing glow ring */}
+          <span className="absolute -inset-1.5 rounded-full bg-brand-primary/25 animate-ping opacity-75 pointer-events-none" />
+          <BrainCircuit className="w-6 h-6 animate-pulse" />
+          
+          {/* Desktop/Tablet Hover Tooltip */}
+          <span className="absolute right-16 bg-brand-surface border border-brand-border text-brand-text text-xs font-bold px-3 py-1.5 rounded-xl shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none hidden md:block">
+            Ask AI Assistant
+          </span>
+        </button>
+      </div>
+
     </div>
   );
 }

@@ -408,36 +408,36 @@ export default function Dashboard() {
           <div className="mb-14">
             <h3 className="text-2xl font-bold mb-6 flex items-center gap-3"><Activity className="w-6 h-6 text-brand-primary"/> Activity Tracker</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <motion.div whileHover={{ y: -4 }} className="glass-panel p-5 rounded-2xl border border-brand-border">
-                <p className="text-brand-muted text-sm font-medium mb-2 flex items-center gap-2"><Database className="w-4 h-4"/> Materials Uploaded</p>
-                <h3 className="text-2xl font-bold">{dashboardData.activityMetrics.uploaded}</h3>
+              <motion.div whileHover={{ y: -4 }} className="glass-panel p-4 sm:p-5 rounded-2xl border border-brand-border flex flex-col justify-between">
+                <p className="text-brand-muted text-xs sm:text-sm font-medium mb-2 flex items-center gap-1.5 truncate"><Database className="w-3.5 h-3.5 shrink-0"/> Materials Uploaded</p>
+                <h3 className="text-xl sm:text-2xl font-bold">{dashboardData.activityMetrics.uploaded}</h3>
               </motion.div>
-              <motion.div whileHover={{ y: -4 }} className="glass-panel p-5 rounded-2xl border border-brand-border">
-                <p className="text-brand-muted text-sm font-medium mb-2 flex items-center gap-2"><Zap className="w-4 h-4"/> Study Sessions</p>
-                <h3 className="text-2xl font-bold">{dashboardData.activityMetrics.sessions}</h3>
+              <motion.div whileHover={{ y: -4 }} className="glass-panel p-4 sm:p-5 rounded-2xl border border-brand-border flex flex-col justify-between">
+                <p className="text-brand-muted text-xs sm:text-sm font-medium mb-2 flex items-center gap-1.5 truncate"><Zap className="w-3.5 h-3.5 shrink-0"/> Study Sessions</p>
+                <h3 className="text-xl sm:text-2xl font-bold">{dashboardData.activityMetrics.sessions}</h3>
               </motion.div>
-              <motion.div whileHover={{ y: -4 }} className="glass-panel p-5 rounded-2xl border border-brand-border">
-                <p className="text-brand-muted text-sm font-medium mb-2 flex items-center gap-2"><CheckCircle2 className="w-4 h-4"/> Materials Completed</p>
-                <h3 className="text-2xl font-bold">{dashboardData.activityMetrics.completed}</h3>
+              <motion.div whileHover={{ y: -4 }} className="glass-panel p-4 sm:p-5 rounded-2xl border border-brand-border flex flex-col justify-between">
+                <p className="text-brand-muted text-xs sm:text-sm font-medium mb-2 flex items-center gap-1.5 truncate"><CheckCircle2 className="w-3.5 h-3.5 shrink-0"/> Materials Completed</p>
+                <h3 className="text-xl sm:text-2xl font-bold">{dashboardData.activityMetrics.completed}</h3>
               </motion.div>
-              <motion.div whileHover={{ y: -4 }} className="glass-panel p-5 rounded-2xl border border-brand-border">
-                <p className="text-brand-muted text-sm font-medium mb-2 flex items-center gap-2"><Calendar className="w-4 h-4"/> Last Activity</p>
-                <h3 className="text-2xl font-bold">{dashboardData.activityMetrics.lastActive}</h3>
+              <motion.div whileHover={{ y: -4 }} className="glass-panel p-4 sm:p-5 rounded-2xl border border-brand-border flex flex-col justify-between">
+                <p className="text-brand-muted text-xs sm:text-sm font-medium mb-2 flex items-center gap-1.5 truncate"><Calendar className="w-3.5 h-3.5 shrink-0"/> Last Activity</p>
+                <h3 className="text-xl sm:text-2xl font-bold truncate">{dashboardData.activityMetrics.lastActive}</h3>
               </motion.div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 glass-panel p-6 rounded-3xl border border-brand-border">
-                <h4 className="font-bold mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-brand-primary"/> Weekly Learning Activity</h4>
+              <div className="md:col-span-2 glass-panel p-4 sm:p-6 rounded-3xl border border-brand-border">
+                <h4 className="font-bold mb-4 flex items-center gap-2 text-sm sm:text-base"><TrendingUp className="w-5 h-5 text-brand-primary"/> Weekly Learning Activity</h4>
                 <Suspense fallback={<div className="h-[220px] w-full bg-brand-surface animate-pulse border border-brand-border rounded-3xl" />}>
                   <WeeklyActivityChart data={dashboardData.activity} />
                 </Suspense>
               </div>
               <div className="flex flex-col gap-4">
-                <motion.div whileHover={{ y: -2 }} className="glass-panel p-5 rounded-2xl border border-brand-border flex items-center gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500 shrink-0"><Clock className="w-6 h-6"/></div>
+                <motion.div whileHover={{ y: -2 }} className="glass-panel p-4 sm:p-5 rounded-2xl border border-brand-border flex items-center gap-4 flex-1">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500 shrink-0"><Clock className="w-5 h-5 sm:w-6 sm:h-6"/></div>
                   <div>
-                    <p className="text-brand-muted text-xs font-medium">Time Spent Studying</p>
-                    <h3 className="text-xl font-bold">{dashboardData.activityMetrics.timeSpent} <span className="text-sm font-normal text-brand-muted">mins</span></h3>
+                    <p className="text-brand-muted text-[10px] sm:text-xs font-medium">Time Spent Studying</p>
+                    <h3 className="text-lg sm:text-xl font-bold">{dashboardData.activityMetrics.timeSpent} <span className="text-xs sm:text-sm font-normal text-brand-muted">mins</span></h3>
                   </div>
                 </motion.div>
                 <motion.div whileHover={{ y: -2 }} className="glass-panel p-5 rounded-2xl border border-brand-border flex items-center gap-4 flex-1">
