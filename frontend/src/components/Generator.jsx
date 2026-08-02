@@ -7,6 +7,7 @@ import Logo from './Logo';
 import api, { getErrorMessage } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import AIProcessingScreen from "./AIProcessingScreen";
 
 export default function Generator() {
   // Phase management: 1 (Upload) -> 2 (Select Modules) -> 3 (Results)
@@ -290,6 +291,7 @@ export default function Generator() {
           )}
         </AnimatePresence>
       </main>
+      <AIProcessingScreen isGenerating={isGenerating} />
     </div>
   );
 }

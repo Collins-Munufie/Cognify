@@ -648,11 +648,20 @@ TEXT_CACHE = {}
 
 import asyncio
 
-async def _generate_module_group(text: str, modules: list) -> dict:
+async def _generate_module_group(text: str, modules: list, include_info: bool = False) -> dict:
     if not modules:
         return {}
         
     json_structure = "{\n"
+    if include_info:
+        json_structure += '      "document_info": {\n'
+        json_structure += '        "title": "Document title or inferred title (max 100 chars)",\n'
+        json_structure += '        "summary": "Executive summary in 3-4 sentences (max 300 chars)",\n'
+        json_structure += '        "key_concepts": ["concept1", "concept2", "concept3", "concept4", "concept5"],\n'
+        json_structure += '        "key_points": ["Important point 1", "Important point 2", "Important point 3", "Important point 4"],\n'
+        json_structure += '        "word_count": 1000\n'
+        json_structure += '      },\n'
+        
     if "Notes" in modules:
         json_structure += '      "summary": "High-quality PowerPoint-style study notes formatted in Markdown. Use slide headings (## Slide X: Title) and bullet points. Must cover EVERYTHING from the material clearly.",\n'
         json_structure += '      "key_points": ["Key point 1", "Key point 2"],\n'
@@ -695,6 +704,20 @@ EDUCATIONAL CONTENT ONLY (MANDATORY)
 - You must ignore all structural text, tables of contents, page numbers, page headers, footers, index lists, metadata, and formatting symbols.
 - Generate questions and study materials ONLY from actual educational content and learning concepts.
 - NEVER generate questions referencing layout or document structures (e.g., do NOT generate questions about "Contents", "Page No.", "Index", "Chapter list", etc.).
+
+"""
+    
+    if include_info:
+        prompt += """----------------------------------------
+DOCUMENT INFORMATION EXTRACTION (MANDATORY)
+----------------------------------------
+- Extract key summary and metadata from the document text.
+- Fill the "document_info" field exactly as described in the JSON structure.
+- Title should be descriptive (e.g. the main topic discussed).
+- Summary should be 3-4 sentences covering the core overview.
+- Key concepts should be the 5 most important terms.
+- Key points should be the 4 most critical takeaways.
+- Provide an estimated word count.
 
 """
 
@@ -1010,27 +1033,24 @@ async def generate_flashcards(text: str, card_type: str = "Standard", selected_m
 
     logger.info(f"Generating flashcards with card_type: {card_type}, text length: {len(cleaned_text)}")
     
-    # 2. Group the modules into Q&A vs Long-form to avoid hitting the 8000 token limit of a single call
-    group_a = [] # MCQs, Flashcards, True/False
-    group_b = [] # Fill-in-the-Blanks, Written Test
-    long_form_groups = [] # Notes, Tutor Lesson, Podcast
+    # 2. Group the modules into exactly 2 parallel calls to avoid rate limits and speed up execution
+    group_a = [] # All structured Q&A / assessment elements
+    group_b = [] # All prose content (Notes, Tutor, Podcast)
     
     for m in modules:
         if m in ["Notes", "Tutor Lesson", "Podcast"]:
-            long_form_groups.append([m])
-        elif m in ["Fill-in-the-Blank", "Written Test"]:
             group_b.append(m)
         else:
             group_a.append(m)
             
-    # Execute all group generations concurrently
+    # Execute group generations concurrently
     tasks = []
     if group_a:
-        tasks.append(_generate_module_group(cleaned_text, group_a))
+        tasks.append(_generate_module_group(cleaned_text, group_a, include_info=True))
     if group_b:
-        tasks.append(_generate_module_group(cleaned_text, group_b))
-    for g in long_form_groups:
-        tasks.append(_generate_module_group(cleaned_text, g))
+        # If group_a is not generated, put document info in group_b
+        include_info_b = not bool(group_a)
+        tasks.append(_generate_module_group(cleaned_text, group_b, include_info=include_info_b))
         
     results = await asyncio.gather(*tasks, return_exceptions=True)
     

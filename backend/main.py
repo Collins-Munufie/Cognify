@@ -100,14 +100,11 @@ async def generate_flashcards_endpoint(
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from PDF.")
         
-        # Generate flashcards and extract document info in parallel
-        import asyncio
-        study_set_data, document_info = await asyncio.gather(
-            generate_flashcards(extracted_text, card_type),
-            extract_document_info(extracted_text)
-        )
+        # Generate flashcards (which now includes document info)
+        study_set_data = await generate_flashcards(extracted_text, card_type)
         
-        study_set_data["document_info"] = document_info
+        if "document_info" not in study_set_data:
+            study_set_data["document_info"] = await extract_document_info(extracted_text)
         
         if user_stats:
             user_stats.success_generations += 1
@@ -152,14 +149,11 @@ async def generate_from_url_endpoint(
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="Could not extract text from the provided URL.")
             
-        # Generate flashcards and extract document info
-        import asyncio
-        study_set_data, document_info = await asyncio.gather(
-            generate_flashcards(extracted_text, card_type),
-            extract_document_info(extracted_text)
-        )
+        # Generate flashcards (which now includes document info)
+        study_set_data = await generate_flashcards(extracted_text, card_type)
         
-        study_set_data["document_info"] = document_info
+        if "document_info" not in study_set_data:
+            study_set_data["document_info"] = await extract_document_info(extracted_text)
         
         if user_stats:
             user_stats.success_generations += 1
@@ -227,12 +221,9 @@ async def generate_selected_endpoint(
         db.commit()
 
     try:
-        import asyncio
-        study_set_data, document_info = await asyncio.gather(
-            generate_flashcards(req.extracted_text, "Standard", req.modules),
-            extract_document_info(req.extracted_text)
-        )
-        study_set_data["document_info"] = document_info
+        study_set_data = await generate_flashcards(req.extracted_text, "Standard", req.modules)
+        if "document_info" not in study_set_data:
+            study_set_data["document_info"] = await extract_document_info(req.extracted_text)
         study_set_data["raw_content"] = req.extracted_text
         study_set_data["selected_modules"] = req.modules
         
