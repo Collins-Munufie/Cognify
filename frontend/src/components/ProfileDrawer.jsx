@@ -26,6 +26,39 @@ export default function ProfileDrawer({ isOpen, onClose, stats }) {
 
   if (!isOpen) return null;
 
+  const compressImage = (base64Str, maxWidth = 120, maxHeight = 120) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = () => {
+        resolve(base64Str);
+      };
+    });
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -35,9 +68,16 @@ export default function ProfileDrawer({ isOpen, onClose, stats }) {
       }
       
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreview(reader.result);
-        setProfilePicture(reader.result);
+      reader.onloadend = async () => {
+        try {
+          const compressed = await compressImage(reader.result);
+          setPreview(compressed);
+          setProfilePicture(compressed);
+        } catch (err) {
+          console.warn("Failed to compress image, using original:", err);
+          setPreview(reader.result);
+          setProfilePicture(reader.result);
+        }
       };
       reader.readAsDataURL(file);
     }

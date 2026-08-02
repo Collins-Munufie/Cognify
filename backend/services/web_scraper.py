@@ -1,8 +1,35 @@
 import requests
 from bs4 import BeautifulSoup
+import socket
+import ipaddress
+from urllib.parse import urlparse
+
+def is_safe_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return False
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        
+        # Prevent DNS rebinding or direct IP targeting
+        # Resolve all IPs for hostname
+        ips = socket.getaddrinfo(hostname, None)
+        for family, _, _, _, sockaddr in ips:
+            ip_str = sockaddr[0]
+            ip = ipaddress.ip_address(ip_str)
+            if ip.is_loopback or ip.is_private or ip.is_link_local:
+                return False
+        return True
+    except Exception:
+        return False
 
 def extract_text_from_url(url: str) -> str:
     """Fetches a generic URL and extracts readable text."""
+    if not is_safe_url(url):
+        raise ValueError("SSRF Protection: Access to this URL is blocked (private/local subnet or invalid schema).")
+        
     try:
         # Using a standard browser user-agent to prevent basic 403 blocks
         headers = {

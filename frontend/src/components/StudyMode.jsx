@@ -50,6 +50,10 @@ export default function StudyMode() {
   // Podcast State
   const [isPlaying, setIsPlaying] = useState(false);
   const synthRef = useRef(window.speechSynthesis);
+  const isPlayingRef = useRef(false);
+  const currentLineIndexRef = useRef(0);
+  const scriptLinesRef = useRef([]);
+  const utteranceRef = useRef(null);
 
   const fetchSetData = useCallback(async () => {
     setLoading(true);
@@ -97,11 +101,11 @@ export default function StudyMode() {
 
     const intervalId = setInterval(async () => {
       try {
-        await api.put('/api/user-stats/study-time', { seconds: 10 });
+        await api.put('/api/user-stats/study-time', { seconds: 60 });
       } catch (err) {
         console.warn('Failed to log study time:', err);
       }
-    }, 10000);
+    }, 60000);
 
     return () => {
       clearInterval(intervalId);
@@ -112,7 +116,8 @@ export default function StudyMode() {
   useEffect(() => {
     const synth = synthRef.current;
     if (activeMode !== 'podcast') {
-       if (synth.speaking) {
+       if (synth.speaking || isPlayingRef.current) {
+         isPlayingRef.current = false;
          synth.cancel();
          setIsPlaying(false);
        }
@@ -133,6 +138,7 @@ export default function StudyMode() {
 
     
     return () => {
+      isPlayingRef.current = false;
       synth.cancel();
     }
   }, [activeMode, cards]);
@@ -219,104 +225,118 @@ export default function StudyMode() {
   };
 
   // ----- PODCAST LOGIC -----
+  const speakNextLine = useCallback(() => {
+    if (!isPlayingRef.current) return;
+    const synth = synthRef.current;
+    
+    if (currentLineIndexRef.current >= scriptLinesRef.current.length) {
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+      return;
+    }
+    
+    const line = scriptLinesRef.current[currentLineIndexRef.current];
+    const utterance = new SpeechSynthesisUtterance(line.text);
+    utteranceRef.current = utterance;
+    
+    const voices = synth.getVoices();
+    let voice1, voice2;
+    let pitch1 = 1, pitch2 = 1.1;
+    let rate1 = 0.95, rate2 = 0.95;
+    
+    const findVoice = (keywords) => voices.find(v => keywords.some(k => v.name.toLowerCase().includes(k))) || voices.find(v => v.lang.includes("en")) || voices[0];
+    
+    if (podcastVoice === 'Warm Female Tutor') {
+       voice1 = voice2 = findVoice(['female', 'samantha', 'zira', 'victoria', 'karen']);
+       pitch1 = pitch2 = 1.15;
+    } else if (podcastVoice === 'Deep Male Narrator') {
+       voice1 = voice2 = findVoice(['male', 'david', 'alex', 'daniel', 'mark']);
+       pitch1 = pitch2 = 0.8;
+       rate1 = rate2 = 0.9;
+    } else if (podcastVoice === 'Default AI Voice') {
+       voice1 = voice2 = voices[0];
+    } else {
+       voice1 = findVoice(['female', 'samantha', 'zira']) || voices[0];
+       voice2 = [...voices].reverse().find(v => v.name !== voice1?.name && v.lang.includes("en")) || voices[1] || voices[0];
+       pitch1 = 1.1; pitch2 = 0.9;
+    }
+    
+    if (podcastVoice === 'Conversational Mode') {
+       utterance.voice = line.voice === 0 ? voice1 : voice2;
+       utterance.pitch = line.voice === 0 ? pitch1 : pitch2;
+       utterance.rate = line.voice === 0 ? rate1 : rate2;
+    } else {
+       utterance.voice = voice1;
+       utterance.pitch = pitch1;
+       utterance.rate = rate1;
+    }
+    
+    utterance.onend = () => {
+      currentLineIndexRef.current += 1;
+      speakNextLine();
+    };
+    
+    utterance.onerror = (e) => {
+      console.warn("Speech synthesis error:", e);
+      setIsPlaying(false);
+      isPlayingRef.current = false;
+    };
+    
+    synth.speak(utterance);
+  }, [podcastVoice]);
+
   const togglePodcast = () => {
     const synth = synthRef.current;
     
     if (synth.speaking && !synth.paused && isPlaying) {
       synth.pause();
       setIsPlaying(false);
+      isPlayingRef.current = false;
       return;
     }
     if (synth.paused) {
       synth.resume();
       setIsPlaying(true);
+      isPlayingRef.current = true;
       return;
     }
 
     setIsPlaying(true);
+    isPlayingRef.current = true;
+    currentLineIndexRef.current = 0;
     
     const podcastScript = flashcardSet.podcast_script;
-    let rawScript = [];
+    const lines = [];
 
     if (podcastScript) {
-      // Split the script into sentences to prevent TTS engines from cutting off long strings
-      rawScript.push({ text: `Welcome to your Study Cast! Today's topic is: ${flashcardSet.title}. Let's dive right in.`, voice: 0 });
-      
+      lines.push({ text: `Welcome to your Study Cast! Today's topic is: ${flashcardSet.title}. Let's dive right in.`, voice: 0 });
       const sentences = podcastScript.match(/[^.!?]+[.!?]+/g) || [podcastScript];
       sentences.forEach(sentence => {
         if (sentence.trim()) {
-           rawScript.push({ text: sentence.trim(), voice: 1 });
+           lines.push({ text: sentence.trim(), voice: 1 });
         }
       });
-      
-      rawScript.push({ text: "That wraps up this episode. Keep studying and stay curious!", voice: 0 });
+      lines.push({ text: "That wraps up this episode. Keep studying and stay curious!", voice: 0 });
     } else {
-      // Fallback for older study sets
       const summaryText = flashcardSet.summary || "No summary found.";
       const keyPointsArray = flashcardSet.key_points || [];
-
-      rawScript = [
-        { text: `Welcome back to your Study Cast. Today we are focusing on: ${flashcardSet.title}. Let's jump in!`, voice: 0 },
-        { text: `Sounds great. Here is the executive overview: ${summaryText}`, voice: 1 },
-        { text: `Excellent. Now, let's go over the key concepts you need to memorize.`, voice: 0 }
-      ];
-
+      lines.push({ text: `Welcome back to your Study Cast. Today we are focusing on: ${flashcardSet.title}. Let's jump in!`, voice: 0 });
+      lines.push({ text: `Sounds great. Here is the executive overview: ${summaryText}`, voice: 1 });
+      lines.push({ text: `Excellent. Now, let's go over the key concepts you need to memorize.`, voice: 0 });
       keyPointsArray.forEach((kp, i) => {
-         rawScript.push({ text: `Key point number ${i+1}. ${kp}`, voice: i % 2 === 0 ? 1 : 0 });
+         lines.push({ text: `Key point number ${i+1}. ${kp}`, voice: i % 2 === 0 ? 1 : 0 });
       });
-      
-      rawScript.push({ text: "That wraps up this learning session. Good luck reviewing your flashcards!", voice: 0 });
+      lines.push({ text: "That wraps up this learning session. Good luck reviewing your flashcards!", voice: 0 });
     }
 
-    const voices = synth.getVoices();
-    let voice1, voice2;
-    let pitch1 = 1, pitch2 = 1.1;
-    let rate1 = 0.95, rate2 = 0.95;
-
-    // Helper to find voice by keyword
-    const findVoice = (keywords) => voices.find(v => keywords.some(k => v.name.toLowerCase().includes(k))) || voices.find(v => v.lang.includes("en")) || voices[0];
-
-    if (podcastVoice === 'Warm Female Tutor') {
-       voice1 = voice2 = findVoice(['female', 'samantha', 'zira', 'victoria', 'karen']);
-       pitch1 = pitch2 = 1.15; // Slightly higher pitch for warmth
-    } else if (podcastVoice === 'Deep Male Narrator') {
-       voice1 = voice2 = findVoice(['male', 'david', 'alex', 'daniel', 'mark']);
-       pitch1 = pitch2 = 0.8; // Lower pitch for deep narrator
-       rate1 = rate2 = 0.9; // Slightly slower
-    } else if (podcastVoice === 'Default AI Voice') {
-       voice1 = voice2 = voices[0];
-    } else {
-       // Conversational Mode (2 distinct voices)
-       voice1 = findVoice(['female', 'samantha', 'zira']) || voices[0];
-       voice2 = [...voices].reverse().find(v => v.name !== voice1?.name && v.lang.includes("en")) || voices[1] || voices[0];
-       pitch1 = 1.1; pitch2 = 0.9;
-    }
-
-    rawScript.forEach(line => {
-      const utterance = new SpeechSynthesisUtterance(line.text);
-      
-      if (podcastVoice === 'Conversational Mode') {
-         utterance.voice = line.voice === 0 ? voice1 : voice2;
-         utterance.pitch = line.voice === 0 ? pitch1 : pitch2;
-         utterance.rate = line.voice === 0 ? rate1 : rate2;
-      } else {
-         utterance.voice = voice1;
-         utterance.pitch = pitch1;
-         utterance.rate = rate1;
-      }
-      
-      utterance.onend = () => {
-         if (line === rawScript[rawScript.length - 1]) setIsPlaying(false);
-      }
-      utterance.onerror = () => setIsPlaying(false);
-      
-      synth.speak(utterance);
-    });
+    scriptLinesRef.current = lines;
+    speakNextLine();
   };
 
   const stopPodcast = () => {
-    synthRef.current.cancel();
+    isPlayingRef.current = false;
     setIsPlaying(false);
+    synthRef.current.cancel();
   };
   // -------------------------
 

@@ -18,7 +18,14 @@ import models
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "quantum_flashcard_super_secret_key_123")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    # Require configuration in hosting environments or production mode
+    if os.environ.get("VERCEL") or os.environ.get("ENV") == "production":
+        raise RuntimeError("JWT_SECRET_KEY environment variable MUST be defined in production!")
+    else:
+        # Development fallback
+        SECRET_KEY = "quantum_flashcard_super_secret_key_123"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -111,6 +118,11 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    
+    # Initialize user stats record to prevent None stats returns
+    user_stats = models.UserStats(user_id=new_user.id)
+    db.add(user_stats)
+    db.commit()
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(

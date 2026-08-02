@@ -50,8 +50,8 @@ default_origins = [
 # Merge unique origins
 origins = list(set(default_origins + allowed_origins))
 
-# Regex to allow all localhost/127.0.0.1 ports and Vercel deployments (including branch/preview deployments)
-allow_origin_regex = r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https?://.*\.vercel\.app|https?://.*\.github\.io"
+# Regex to allow all localhost/127.0.0.1 ports and Vercel/GitHub deployments with anchored boundaries
+allow_origin_regex = r"^(https?://(localhost|127\.0\.0\.1)(:\d+)?|https?://[a-zA-Z0-9-]+\.vercel\.app|https?://[a-zA-Z0-9-]+\.github\.io)$"
 
 app.add_middleware(
     CORSMiddleware,
@@ -70,6 +70,22 @@ from database import get_db
 from sqlalchemy.orm import Session
 from fastapi import Depends
 from typing import Optional
+
+async def read_file_safe(file: UploadFile, max_size: int = 10 * 1024 * 1024) -> bytes:
+    content_length = file.headers.get("content-length")
+    if content_length and int(content_length) > max_size:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
+    
+    content = bytearray()
+    chunk_size = 8192
+    while True:
+        chunk = await file.read(chunk_size)
+        if not chunk:
+            break
+        content.extend(chunk)
+        if len(content) > max_size:
+            raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
+    return bytes(content)
 
 @app.post("/api/generate-flashcards")
 async def generate_flashcards_endpoint(
@@ -91,7 +107,7 @@ async def generate_flashcards_endpoint(
         user_stats.processing_status = "Processing"
         db.commit()
 
-    content = await file.read()
+    content = await read_file_safe(file)
     
     try:
         # Extract text from the document
@@ -180,7 +196,7 @@ async def extract_document_endpoint(file: UploadFile = File(...)):
     allowed_exts = (".pdf", ".docx", ".pptx", ".txt")
     if not file.filename.lower().endswith(allowed_exts):
         raise HTTPException(status_code=400, detail="Unsupported file format.")
-    content = await file.read()
+    content = await read_file_safe(file)
     try:
         extracted_text = extract_text_from_document(content, file.filename)
         if not extracted_text.strip():

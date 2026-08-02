@@ -1278,9 +1278,14 @@ async def grade_written_test(questions: list, user_answers: list, context_text: 
         ], temperature=0.2)
         
         result_content = result_content.strip()
-        if result_content.startswith("```json"): result_content = result_content[7:]
-        if result_content.startswith("```"): result_content = result_content[3:]
-        if result_content.endswith("```"): result_content = result_content[:-3]
+        start_idx = result_content.find('{')
+        end_idx = result_content.rfind('}')
+        if start_idx != -1 and end_idx != -1:
+            result_content = result_content[start_idx:end_idx+1]
+        else:
+            if result_content.startswith("```json"): result_content = result_content[7:]
+            if result_content.startswith("```"): result_content = result_content[3:]
+            if result_content.endswith("```"): result_content = result_content[:-3]
             
         return json.loads(result_content.strip())
     except Exception as e:

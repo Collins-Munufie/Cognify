@@ -164,7 +164,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
                     placeholder="https://en.wikipedia.org/wiki/Quantum_mechanics"
                     value={urlInput}
                     onChange={(e) => setUrlInput(e.target.value)}
-                    className="block w-full pl-11 pr-4 py-4 bg-white border-2 border-brand-border rounded-xl shadow-sm focus:ring-4 focus:ring-brand-primary/20 focus:border-brand-primary text-brand-text placeholder-brand-muted outline-none transition-all"
+                    className="block w-full pl-11 pr-4 py-4 bg-brand-surface border-2 border-brand-border rounded-xl shadow-sm focus:ring-4 focus:ring-brand-primary/20 focus:border-brand-primary text-brand-text placeholder-brand-muted outline-none transition-all"
                   />
                 </div>
               </div>
