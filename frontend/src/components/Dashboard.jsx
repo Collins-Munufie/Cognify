@@ -264,15 +264,11 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto px-6 pt-10 relative z-10">
          
          {/* Dashboard Hero Greeting Card */}
-         <div className="glass-panel p-8 rounded-[2.5rem] border border-brand-border bg-gradient-to-r from-brand-surface to-brand-primary/5 shadow-lg flex items-center justify-between mb-10 overflow-hidden relative">
+         <div className="glass-panel p-8 rounded-[2.5rem] border border-brand-border bg-gradient-to-r from-brand-surface to-brand-primary/5 shadow-lg mb-10 overflow-hidden relative">
             <div className="absolute right-0 top-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
             <div className="z-10">
-              <span className="px-3 py-1 bg-brand-primary/20 rounded-lg text-xs font-black text-brand-primary border border-brand-primary/30 uppercase tracking-widest mb-4 inline-block animate-pulse">Command Center</span>
               <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-brand-text mb-3">Welcome back, {dashboardData.user.name}</h1>
               <p className="text-brand-muted text-base sm:text-lg max-w-xl font-medium leading-relaxed">Accelerate your active recall with custom spaced repetition and advanced AI-driven study modules.</p>
-            </div>
-            <div className="hidden lg:block shrink-0 pr-8 z-10 text-brand-primary/80 animate-[pulse_3s_infinite_ease-in-out]">
-              <Sparkles className="w-16 h-16 text-brand-primary" />
             </div>
          </div>
 

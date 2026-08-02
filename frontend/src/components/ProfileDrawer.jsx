@@ -72,12 +72,12 @@ export default function ProfileDrawer({ isOpen, onClose, stats }) {
       ></div>
 
       {/* Slide-over panel */}
-      <div className="fixed right-0 top-0 h-full w-full sm:w-[420px] z-[100] bg-brand-surface border-l border-brand-border shadow-2xl flex flex-col justify-between overflow-y-auto animate-[slideIn_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards]">
+      <div className="fixed right-0 top-0 h-full w-full sm:w-96 z-[100] bg-brand-surface border-l border-brand-border shadow-2xl flex flex-col justify-between overflow-y-auto animate-[slideIn_0.3s_cubic-bezier(0.16,1,0.3,1)_forwards]">
         
         {/* Banner + Header */}
         <div>
-          <div className="relative h-32 bg-gradient-to-r from-brand-primary to-orange-600 flex items-center justify-between px-6">
-            <h3 className="text-2xl font-black text-white tracking-tight">Your Profile</h3>
+          <div className="relative h-24 bg-gradient-to-r from-brand-primary to-orange-600 flex items-center justify-between px-6">
+            <h3 className="text-xl font-black text-white tracking-tight">Your Profile</h3>
             <button 
               onClick={onClose} 
               className="p-2 rounded-xl bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer hover:scale-105 active:scale-95"
@@ -88,9 +88,9 @@ export default function ProfileDrawer({ isOpen, onClose, stats }) {
 
           <div className="px-6 pb-6 relative">
             {/* Avatar upload overlap */}
-            <div className="flex justify-between items-end -mt-10 mb-6">
+            <div className="flex justify-between items-end -mt-8 mb-5">
               <div 
-                className="relative group cursor-pointer w-24 h-24 rounded-full overflow-hidden border-4 border-brand-surface bg-brand-bg flex items-center justify-center shadow-lg"
+                className="relative group cursor-pointer w-20 h-20 rounded-full overflow-hidden border-4 border-brand-surface bg-brand-bg flex items-center justify-center shadow-lg"
                 onClick={() => fileInputRef.current?.click()}
               >
                 {preview ? (
