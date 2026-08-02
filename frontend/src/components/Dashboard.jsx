@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { BrainCircuit, Loader2, Play, Plus, BookOpen, Download, Database, CheckCircle2, TrendingUp, Compass, Target, Hash, CheckSquare, Layers, Clock, ArrowRight, Trash2, Edit2, UserCircle, Mail, LogOut, X, Settings, Activity, Flame, Calendar, Zap, AlertTriangle, Check, Cpu, RefreshCw } from 'lucide-react';
+import { BrainCircuit, Loader2, Play, Plus, BookOpen, Download, Database, CheckCircle2, TrendingUp, Compass, Target, Hash, CheckSquare, Layers, Clock, ArrowRight, Trash2, Edit2, UserCircle, Mail, LogOut, X, Settings, Activity, Flame, Calendar, Zap, AlertTriangle, Check, Cpu, RefreshCw, Sparkles } from 'lucide-react';
 import Logo from './Logo';
-import EditProfileModal from './EditProfileModal';
+import ProfileDrawer from './ProfileDrawer';
 import api, { getErrorMessage } from '../lib/api';
 
 const WeeklyActivityChart = lazy(() => import('./WeeklyActivityChart'));
@@ -14,7 +14,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [renameModal, setRenameModal] = useState({ open: false, id: null, title: '' });
   const [editProfileOpen, setEditProfileOpen] = useState(false);
@@ -231,85 +230,49 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-text relative pb-32">
+    <div className="min-h-screen bg-brand-bg text-brand-text relative pb-32 overflow-hidden">
+      {/* Glowing background ambient orbs */}
+      <div className="absolute top-[10%] left-[-15%] w-[600px] h-[600px] bg-brand-primary/5 rounded-full blur-[130px] pointer-events-none"></div>
+      <div className="absolute top-[40%] right-[-10%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-[10%] left-[10%] w-[450px] h-[450px] bg-purple-500/5 rounded-full blur-[110px] pointer-events-none"></div>
       {/* 1. HEADER / NAVBAR */}
       <header className="sticky top-0 z-50 bg-brand-surface/80 backdrop-blur-md border-b border-brand-border">
          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <Logo size="small" />
             
-            <div className="flex items-center gap-6 relative">
+            <div className="flex items-center gap-6">
                <div 
-                  onClick={() => setProfileOpen(!profileOpen)}
-                  className="hidden md:flex items-center gap-3 cursor-pointer hover:bg-brand-surface p-2 rounded-xl transition-colors border border-transparent hover:border-brand-border"
+                  onClick={() => setEditProfileOpen(true)}
+                  className="flex items-center gap-3 cursor-pointer hover:bg-brand-surface/60 p-2 rounded-xl transition-all border border-transparent hover:border-brand-border hover:scale-102"
                >
-                  <div className="w-10 h-10 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold border border-brand-primary/30 overflow-hidden">
+                  <div className="w-10 h-10 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold border border-brand-primary/30 overflow-hidden shadow-inner shrink-0">
                      {dashboardData.user.profile_picture ? (
-                        <img src={dashboardData.user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                        <img src={dashboardData.user.profile_picture} alt="Profile" className="w-full h-full object-cover animate-fade-in" />
                      ) : (
                         dashboardData.user.name.charAt(0).toUpperCase()
                      )}
                   </div>
-                  <div className="flex flex-col">
-                     <span className="text-sm font-bold">{dashboardData.user.name}</span>
-                     <span className="text-xs text-brand-muted">Pro Member</span>
+                  <div className="hidden sm:flex flex-col text-left">
+                     <span className="text-sm font-bold text-brand-text leading-none mb-1">{dashboardData.user.name}</span>
+                     <span className="text-[10px] text-brand-primary font-black uppercase tracking-wider leading-none">Pro Profile</span>
                   </div>
                </div>
-               
-               {/* Clickable Profile Modal Overlay */}
-               {profileOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)}></div>
-                    <motion.div 
-                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                       className="absolute top-16 right-0 w-72 glass-panel p-6 rounded-3xl border border-brand-border shadow-2xl z-50 flex flex-col gap-4"
-                    >
-                       <div className="flex items-center gap-4 border-b border-brand-border pb-4">
-                          <div className="w-14 h-14 rounded-full bg-brand-primary flex items-center justify-center text-white font-bold text-xl shadow-lg overflow-hidden shrink-0">
-                             {dashboardData.user.profile_picture ? (
-                                <img src={dashboardData.user.profile_picture} alt="Profile" className="w-full h-full object-cover" />
-                             ) : (
-                                dashboardData.user.name.charAt(0).toUpperCase()
-                             )}
-                          </div>
-                          <div className="overflow-hidden">
-                             <h4 className="font-bold text-lg truncate w-full">{dashboardData.user.name}</h4>
-                             <p className="text-sm text-brand-muted truncate w-full">{dashboardData.user.email}</p>
-                          </div>
-                       </div>
-                       
-                       <div className="flex flex-col gap-2">
-                          <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-brand-bg border border-brand-border">
-                             <span className="text-brand-muted flex items-center gap-2"><UserCircle className="w-4 h-4"/> Status</span>
-                             <span className="font-bold text-brand-primary">Active</span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm p-2 rounded-lg bg-brand-bg border border-brand-border">
-                             <span className="text-brand-muted flex items-center gap-2"><Mail className="w-4 h-4"/> Email</span>
-                             <span className="font-bold truncate max-w-[100px]">{dashboardData.user.email}</span>
-                          </div>
-                       </div>
-                       
-                       <div className="flex gap-2 mt-2">
-                          <button onClick={() => { setEditProfileOpen(true); setProfileOpen(false); }} className="flex-1 py-3 bg-brand-bg hover:bg-brand-surface border border-brand-border rounded-xl font-bold transition-colors flex justify-center items-center gap-2 text-sm">
-                             <Settings className="w-4 h-4" /> Profile
-                          </button>
-                          <button onClick={handleLogout} className="flex-1 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-bold transition-colors flex justify-center items-center gap-2 text-sm">
-                             <LogOut className="w-4 h-4" /> Logout
-                          </button>
-                       </div>
-                    </motion.div>
-                  </>
-               )}
             </div>
          </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 pt-10">
+      <div className="max-w-7xl mx-auto px-6 pt-10 relative z-10">
          
-         <div className="flex justify-between items-end mb-8">
-            <div>
-               <h2 className="text-4xl font-bold mb-2">Welcome back, {dashboardData.user.name}</h2>
-               <p className="text-brand-muted text-lg">Here is an overview of your active learning progress.</p>
+         {/* Dashboard Hero Greeting Card */}
+         <div className="glass-panel p-8 rounded-[2.5rem] border border-brand-border bg-gradient-to-r from-brand-surface to-brand-primary/5 shadow-lg flex items-center justify-between mb-10 overflow-hidden relative">
+            <div className="absolute right-0 top-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="z-10">
+              <span className="px-3 py-1 bg-brand-primary/20 rounded-lg text-xs font-black text-brand-primary border border-brand-primary/30 uppercase tracking-widest mb-4 inline-block animate-pulse">Command Center</span>
+              <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-brand-text mb-3">Welcome back, {dashboardData.user.name}</h1>
+              <p className="text-brand-muted text-base sm:text-lg max-w-xl font-medium leading-relaxed">Accelerate your active recall with custom spaced repetition and advanced AI-driven study modules.</p>
+            </div>
+            <div className="hidden lg:block shrink-0 pr-8 z-10 text-brand-primary/80 animate-[pulse_3s_infinite_ease-in-out]">
+              <Sparkles className="w-16 h-16 text-brand-primary" />
             </div>
          </div>
 
@@ -320,36 +283,60 @@ export default function Dashboard() {
          )}
 
          {/* 2. LEARNING OVERVIEW (TOP CARDS) */}
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <motion.div whileHover={{ y: -4 }} className="glass-panel p-6 rounded-3xl border border-brand-border flex items-center gap-4">
-               <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center text-blue-500 shrink-0"><Database className="w-7 h-7"/></div>
+         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <motion.div 
+               whileHover={{ y: -5, boxShadow: '0 15px 30px -10px rgba(59,130,246,0.15)' }} 
+               className="glass-panel p-6 rounded-3xl border border-brand-border flex items-center gap-5 hover:border-blue-500/20 transition-all duration-300 bg-brand-surface/60"
+            >
+               <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shrink-0 border border-blue-500/20 shadow-inner">
+                  <Database className="w-7 h-7"/>
+               </div>
                <div>
-                  <p className="text-brand-muted font-medium mb-1">Total Sets</p>
-                  <h3 className="text-3xl font-bold">{dashboardData.stats.totalSets}</h3>
+                  <p className="text-brand-muted font-black text-[10px] uppercase tracking-widest mb-1">Total Sets</p>
+                  <h3 className="text-3xl font-black">{dashboardData.stats.totalSets}</h3>
                </div>
             </motion.div>
-            <motion.div whileHover={{ y: -4 }} className="glass-panel p-6 rounded-3xl border border-brand-border flex items-center gap-4">
-               <div className="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center text-brand-primary shrink-0"><Layers className="w-7 h-7"/></div>
+            <motion.div 
+               whileHover={{ y: -5, boxShadow: '0 15px 30px -10px rgba(255,130,67,0.15)' }} 
+               className="glass-panel p-6 rounded-3xl border border-brand-border flex items-center gap-5 hover:border-brand-primary/20 transition-all duration-300 bg-brand-surface/60"
+            >
+               <div className="w-14 h-14 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary shrink-0 border border-brand-primary/20 shadow-inner">
+                  <Layers className="w-7 h-7"/>
+               </div>
                <div>
-                  <p className="text-brand-muted font-medium mb-1">Cards Studied</p>
-                  <h3 className="text-3xl font-bold">{dashboardData.stats.totalCards}</h3>
+                  <p className="text-brand-muted font-black text-[10px] uppercase tracking-widest mb-1">Cards Studied</p>
+                  <h3 className="text-3xl font-black">{dashboardData.stats.totalCards}</h3>
                </div>
             </motion.div>
-            <motion.div whileHover={{ y: -4 }} className="glass-panel p-6 rounded-3xl border border-brand-border flex items-center gap-4 relative overflow-hidden">
-               <div className="w-14 h-14 rounded-2xl bg-green-500/20 flex items-center justify-center text-green-500 shrink-0"><Target className="w-7 h-7"/></div>
-               <div className="z-10">
-                  <p className="text-brand-muted font-medium mb-1">Overall Mastery</p>
-                  <h3 className="text-3xl font-bold text-green-400">{dashboardData.stats.mastery}%</h3>
+            <motion.div 
+               whileHover={{ y: -5, boxShadow: '0 15px 30px -10px rgba(34,197,94,0.15)' }} 
+               className="glass-panel p-6 rounded-3xl border border-brand-border flex items-center gap-5 relative overflow-hidden hover:border-green-500/20 transition-all duration-300 bg-brand-surface/60"
+            >
+               <div className="w-14 h-14 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-500 shrink-0 border border-green-500/20 shadow-inner">
+                  <Target className="w-7 h-7"/>
                </div>
-               <div className="absolute bottom-0 left-0 h-1 bg-green-500/30 w-full"><div className="h-full bg-green-500" style={{ width: `${dashboardData.stats.mastery}%` }}></div></div>
+               <div className="z-10">
+                  <p className="text-brand-muted font-black text-[10px] uppercase tracking-widest mb-1">Overall Mastery</p>
+                  <h3 className="text-3xl font-black text-green-400">{dashboardData.stats.mastery}%</h3>
+               </div>
+               <div className="absolute bottom-0 left-0 h-1.5 bg-green-500/10 w-full">
+                  <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400" style={{ width: `${dashboardData.stats.mastery}%` }}></div>
+               </div>
             </motion.div>
-            <motion.div whileHover={{ y: -4 }} className="glass-panel p-6 rounded-3xl border border-brand-border flex items-center gap-4 relative overflow-hidden">
-               <div className="w-14 h-14 rounded-2xl bg-orange-500/20 flex items-center justify-center text-orange-500 shrink-0"><CheckSquare className="w-7 h-7"/></div>
-               <div className="z-10">
-                  <p className="text-brand-muted font-medium mb-1">Quiz Accuracy</p>
-                  <h3 className="text-3xl font-bold text-orange-400">{dashboardData.stats.quizAccuracy}%</h3>
+            <motion.div 
+               whileHover={{ y: -5, boxShadow: '0 15px 30px -10px rgba(249,115,22,0.15)' }} 
+               className="glass-panel p-6 rounded-3xl border border-brand-border flex items-center gap-5 relative overflow-hidden hover:border-orange-500/20 transition-all duration-300 bg-brand-surface/60"
+            >
+               <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500 shrink-0 border border-orange-500/20 shadow-inner">
+                  <CheckSquare className="w-7 h-7"/>
                </div>
-               <div className="absolute bottom-0 left-0 h-1 bg-orange-500/30 w-full"><div className="h-full bg-orange-500" style={{ width: `${dashboardData.stats.quizAccuracy}%` }}></div></div>
+               <div className="z-10">
+                  <p className="text-brand-muted font-black text-[10px] uppercase tracking-widest mb-1">Quiz Accuracy</p>
+                  <h3 className="text-3xl font-black text-orange-400">{dashboardData.stats.quizAccuracy}%</h3>
+               </div>
+               <div className="absolute bottom-0 left-0 h-1.5 bg-orange-500/10 w-full">
+                  <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500" style={{ width: `${dashboardData.stats.quizAccuracy}%` }}></div>
+               </div>
             </motion.div>
          </div>
 
@@ -624,10 +611,12 @@ export default function Dashboard() {
          </div>
       )}
 
-      {/* EDIT PROFILE MODAL */}
-      {editProfileOpen && (
-         <EditProfileModal onClose={() => setEditProfileOpen(false)} />
-      )}
+      {/* PROFILE DRAWER */}
+      <ProfileDrawer 
+         isOpen={editProfileOpen} 
+         onClose={() => setEditProfileOpen(false)} 
+         stats={dashboardData.activityMetrics}
+      />
 
     </div>
   );
