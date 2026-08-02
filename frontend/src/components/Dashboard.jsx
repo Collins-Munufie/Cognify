@@ -464,24 +464,44 @@ export default function Dashboard() {
                      key={set.id} 
                      className="glass-panel p-6 rounded-2xl border border-brand-border flex flex-col h-full hover:shadow-[0_10px_30px_rgba(139,92,246,0.1)] transition-all relative group"
                   >
-                     <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                        {deleteConfirmId === set.id ? (
-                           <div className="flex items-center gap-1.5 bg-red-500/10 px-2 py-1.5 rounded-xl border border-red-500/20 backdrop-blur-md shadow-sm">
-                              <span className="text-xs font-bold text-red-400 px-1">Sure?</span>
-                              <button onClick={() => handleDeleteSet(set.id)} className="p-1.5 text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"><CheckCircle2 className="w-3.5 h-3.5"/></button>
-                              <button onClick={() => setDeleteConfirmId(null)} className="p-1.5 text-brand-muted hover:text-brand-text bg-brand-surface rounded-md transition-colors"><X className="w-3.5 h-3.5"/></button>
-                           </div>
-                        ) : (
-                           <>
-                              <button onClick={() => setRenameModal({ open: true, id: set.id, title: set.title })} className="p-2.5 bg-brand-surface rounded-xl text-brand-muted hover:text-brand-primary transition-all border border-transparent hover:border-brand-primary/20 shadow-sm" title="Rename Set">
-                                 <Edit2 className="w-4 h-4"/>
-                              </button>
-                              <button onClick={() => setDeleteConfirmId(set.id)} className="p-2.5 bg-brand-surface rounded-xl text-brand-muted hover:bg-red-500/10 hover:text-red-500 transition-all border border-transparent hover:border-red-500/20 shadow-sm" title="Delete Set">
-                                 <Trash2 className="w-4 h-4"/>
-                              </button>
-                           </>
-                        )}
-                     </div>
+                      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                         {deleteConfirmId === set.id ? (
+                            <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 rounded-2xl px-3 py-1.5 backdrop-blur-xl shadow-lg animate-pulse">
+                               <span className="text-[10px] font-black text-red-500 tracking-wider uppercase px-1">Delete?</span>
+                               <button 
+                                  onClick={() => handleDeleteSet(set.id)} 
+                                  className="p-1 text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors cursor-pointer"
+                                  title="Yes, Delete"
+                               >
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                               </button>
+                               <button 
+                                  onClick={() => setDeleteConfirmId(null)} 
+                                  className="p-1 text-brand-muted hover:text-brand-text bg-brand-surface border border-brand-border rounded-md transition-colors cursor-pointer"
+                                  title="Cancel"
+                               >
+                                  <X className="w-3 h-3" />
+                               </button>
+                            </div>
+                         ) : (
+                            <>
+                               <button 
+                                  onClick={() => setRenameModal({ open: true, id: set.id, title: set.title })} 
+                                  className="p-2 bg-brand-surface rounded-xl text-brand-muted hover:text-brand-primary hover:border-brand-primary/30 border border-brand-border/40 transition-all shadow-sm cursor-pointer hover:scale-105 active:scale-95" 
+                                  title="Rename Set"
+                               >
+                                  <Edit2 className="w-3.5 h-3.5"/>
+                               </button>
+                               <button 
+                                  onClick={() => setDeleteConfirmId(set.id)} 
+                                  className="p-2 bg-brand-surface rounded-xl text-brand-muted hover:bg-red-500 hover:text-white hover:border-red-500/30 border border-brand-border/40 transition-all shadow-sm cursor-pointer hover:scale-105 active:scale-95" 
+                                  title="Delete Set"
+                               >
+                                  <Trash2 className="w-3.5 h-3.5"/>
+                               </button>
+                            </>
+                         )}
+                      </div>
 
                      <div className="flex items-center gap-2 mb-3">
                         <span className="px-2.5 py-1 bg-brand-surface rounded-md border border-brand-border text-[10px] font-bold uppercase tracking-wider text-brand-muted"><Clock className="w-3 h-3 inline mr-1"/> {new Date(set.unixTime).toLocaleDateString()}</span>
