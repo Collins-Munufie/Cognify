@@ -24,7 +24,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFileSelection(e.dataTransfer.files[0]);
     }
@@ -56,7 +56,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
@@ -67,26 +67,23 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
       <div className="flex bg-brand-surface p-1 rounded-2xl border border-brand-border w-fit mx-auto">
         <button
           onClick={() => setActiveTab('pdf')}
-          className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            activeTab === 'pdf' ? 'bg-brand-primary text-white shadow-lg' : 'text-brand-muted hover:bg-brand-border/50 hover:text-brand-text'
-          }`}
+          className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'pdf' ? 'bg-brand-primary text-white shadow-lg' : 'text-brand-muted hover:bg-brand-border/50 hover:text-brand-text'
+            }`}
         >
           Upload Document
         </button>
         <button
           onClick={() => setActiveTab('url')}
-          className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${
-            activeTab === 'url' ? 'bg-brand-primary text-white shadow-lg' : 'text-brand-muted hover:bg-brand-border/50 hover:text-brand-text'
-          }`}
+          className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'url' ? 'bg-brand-primary text-white shadow-lg' : 'text-brand-muted hover:bg-brand-border/50 hover:text-brand-text'
+            }`}
         >
           Web / YouTube Link
         </button>
       </div>
 
-      <div 
-        className={`glass-panel rounded-3xl p-10 border-2 transition-all duration-300 flex flex-col items-center justify-center text-center relative overflow-hidden ${
-          activeTab === 'pdf' && dragActive ? 'border-brand-primary bg-brand-primary/5' : 'border-dashed border-brand-border/80 hover:border-brand-primary/50'
-        }`}
+      <div
+        className={`glass-panel rounded-3xl p-10 border-2 transition-all duration-300 flex flex-col items-center justify-center text-center relative overflow-hidden ${activeTab === 'pdf' && dragActive ? 'border-brand-primary bg-brand-primary/5' : 'border-dashed border-brand-border/80 hover:border-brand-primary/50'
+          }`}
         onDragEnter={activeTab === 'pdf' ? handleDrag : undefined}
         onDragLeave={activeTab === 'pdf' ? handleDrag : undefined}
         onDragOver={activeTab === 'pdf' ? handleDrag : undefined}
@@ -94,7 +91,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
       >
         <AnimatePresence mode="wait">
           {activeTab === 'pdf' ? (
-            <motion.div 
+            <motion.div
               key="pdf-tab"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -102,7 +99,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
               className="w-full flex justify-center"
               onClick={() => !selectedFile && fileInputRef.current?.click()}
             >
-              <input 
+              <input
                 ref={fileInputRef}
                 type="file"
                 accept=".pdf,.docx,.pptx,.txt"
@@ -132,7 +129,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
                       <p className="text-xs text-brand-muted">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
                     </div>
                     {!isGenerating && (
-                      <button 
+                      <button
                         onClick={(e) => { e.stopPropagation(); setSelectedFile(null); }}
                         className="p-2 text-brand-muted hover:text-brand-text hover:bg-brand-bg rounded-full transition-colors"
                       >
@@ -144,7 +141,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
               )}
             </motion.div>
           ) : (
-            <motion.div 
+            <motion.div
               key="url-tab"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -157,7 +154,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
                 </div>
                 <h3 className="text-xl font-medium mb-2">Paste a Web Link</h3>
                 <p className="text-brand-muted mb-6 text-sm">Supports YouTube Videos & most articles</p>
-                
+
                 <div className="w-full relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <LinkIcon className="h-5 w-5 text-brand-muted" />
@@ -176,7 +173,7 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
         </AnimatePresence>
 
         {isGenerating && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="absolute inset-0 bg-brand-surface/90 backdrop-blur-md z-20 flex flex-col items-center justify-center rounded-3xl"
@@ -187,10 +184,10 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
           </motion.div>
         )}
       </div>
-      
+
       <AnimatePresence>
         {error && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -207,20 +204,20 @@ export default function UploadSection({ onUploadFile, onUploadUrl, isGenerating,
         whileTap={{ scale: 0.98 }}
         onClick={handleSubmit}
         disabled={(activeTab === 'pdf' && !selectedFile) || (activeTab === 'url' && !urlInput.trim()) || isGenerating}
-        className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
-          ((activeTab === 'pdf' && selectedFile) || (activeTab === 'url' && urlInput.trim())) && !isGenerating
+        className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${((activeTab === 'pdf' && selectedFile) || (activeTab === 'url' && urlInput.trim())) && !isGenerating
             ? 'bg-brand-primary hover:bg-brand-primary-hover text-white shadow-[0_0_20px_rgba(139,92,246,0.4)]'
             : 'bg-brand-surface text-brand-muted border border-brand-border cursor-not-allowed opacity-70'
-        }`}
+          }`}
       >
         {isGenerating ? (
           <>
-            Generating Flashcards...
+            <Sparkles className="w-5 h-5" />
+            Generating Study Modes...
           </>
         ) : (
           <>
             <Sparkles className="w-5 h-5" />
-            Generate Flashcards
+            Generate Study Modes
           </>
         )}
       </motion.button>
