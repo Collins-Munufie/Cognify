@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -6,7 +6,8 @@ import { BrainCircuit, Loader2, Play, Plus, BookOpen, Download, Database, CheckC
 import Logo from './Logo';
 import EditProfileModal from './EditProfileModal';
 import api, { getErrorMessage } from '../lib/api';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell } from 'recharts';
+
+const WeeklyActivityChart = lazy(() => import('./WeeklyActivityChart'));
 
 export default function Dashboard() {
   const { user, fetchUser, logout, loading: authLoading } = useAuth();
@@ -426,15 +427,9 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="md:col-span-2 glass-panel p-6 rounded-3xl border border-brand-border">
                 <h4 className="font-bold mb-4 flex items-center gap-2"><TrendingUp className="w-5 h-5 text-brand-primary"/> Weekly Learning Activity</h4>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={dashboardData.activity}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2d2d3d" />
-                    <XAxis dataKey="name" stroke="#6b7280" tick={{fontSize: 12}} />
-                    <YAxis stroke="#6b7280" tick={{fontSize: 12}} />
-                    <RechartsTooltip contentStyle={{backgroundColor: '#1e1e2e', border: '1px solid #2d2d3d', borderRadius: '12px'}} />
-                    <Bar dataKey="sessions" fill="#8b5cf6" radius={[6,6,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<div className="h-[220px] w-full bg-brand-surface animate-pulse border border-brand-border rounded-3xl" />}>
+                  <WeeklyActivityChart data={dashboardData.activity} />
+                </Suspense>
               </div>
               <div className="flex flex-col gap-4">
                 <motion.div whileHover={{ y: -2 }} className="glass-panel p-5 rounded-2xl border border-brand-border flex items-center gap-4 flex-1">

@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BrainCircuit, Upload, Link as LinkIcon, FileText, PlayCircle, ArrowRight, Zap, Target, BookOpen, ChevronDown, CheckCircle2, Star, Sparkles } from 'lucide-react';
 import Logo from './Logo';
@@ -58,8 +57,8 @@ export default function LandingPage() {
             
             <div className="flex items-center gap-4">
                <ThemeToggle />
-               <button onClick={() => navigate('/login')} className="px-5 py-2.5 text-brand-muted hover:text-brand-text font-medium transition-colors hidden sm:block">Log In</button>
-               <button onClick={() => navigate('/login')} className="px-6 py-2.5 bg-brand-text text-brand-bg hover:bg-brand-primary hover:text-white rounded-xl font-bold transition-all shadow-lg hover:scale-105">Get Started</button>
+               <button onClick={() => navigate('/login')} className="px-5 py-2.5 text-brand-muted hover:text-brand-text font-medium transition-colors hidden sm:block cursor-pointer">Log In</button>
+               <button onClick={() => navigate('/login')} className="px-6 py-2.5 bg-brand-text text-brand-bg hover:bg-brand-primary hover:text-white rounded-xl font-bold transition-all shadow-lg hover:scale-105 cursor-pointer">Get Started</button>
             </div>
          </div>
       </nav>
@@ -69,9 +68,7 @@ export default function LandingPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-brand-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
         
         <div className="max-w-5xl mx-auto text-center relative z-10">
-           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-              
-              
+           <div className="animate-fade-in-up">
               <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-tight">
                  Master Your Studies <span className="text-brand-primary block mt-2">Faster with AI.</span>
               </h1>
@@ -79,13 +76,12 @@ export default function LandingPage() {
               <p className="text-xl md:text-2xl text-brand-muted mb-12 max-w-3xl mx-auto leading-relaxed">
                  Trusted by top-tier students. Instantly transform any lecture, document, or YouTube video into interactive flashcards, true/false tests, and intelligent quizzes.
               </p>
-           </motion.div>
+           </div>
 
            {/* MOCK INTERACTIVE WIDGET (Redirects to Generator) */}
-           <motion.div 
-             initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
+           <div 
              onClick={() => navigate('/generate')}
-             className="max-w-3xl mx-auto glass-panel p-2 rounded-3xl border border-brand-border shadow-[0_0_50px_rgba(139,92,246,0.1)] group cursor-pointer hover:border-brand-primary/50 transition-all relative"
+             className="max-w-3xl mx-auto glass-panel p-2 rounded-3xl border border-brand-border shadow-[0_0_50px_rgba(139,92,246,0.1)] group cursor-pointer hover:border-brand-primary/50 transition-all relative animate-fade-in-up-delayed"
            >
               <div className="absolute inset-0 bg-brand-primary/0 group-hover:bg-brand-primary/5 rounded-3xl transition-colors"></div>
               
@@ -97,11 +93,11 @@ export default function LandingPage() {
                  </div>
                  <h3 className="text-2xl font-bold mb-2 group-hover:text-brand-primary transition-colors">Generate Your Next 'A+'</h3>
                  <p className="text-brand-muted font-medium mb-6">Drop your PDF, paste text, or insert a link here.</p>
-                 <button className="px-8 py-4 bg-brand-text text-brand-bg rounded-xl font-bold text-lg flex items-center gap-3 transition-transform group-hover:scale-105 group-hover:bg-brand-primary group-hover:text-white">
+                 <button className="px-8 py-4 bg-brand-text text-brand-bg rounded-xl font-bold text-lg flex items-center gap-3 transition-transform group-hover:scale-105 group-hover:bg-brand-primary group-hover:text-white cursor-pointer">
                     Start Generating <ArrowRight className="w-5 h-5"/>
                  </button>
               </div>
-           </motion.div>
+           </div>
         </div>
       </section>
 
@@ -115,16 +111,15 @@ export default function LandingPage() {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                {features.map((f, i) => (
-                  <motion.div 
-                     initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                     key={i} className="glass-panel p-8 rounded-[2rem] border border-brand-border hover:border-brand-primary/30 transition-all hover:-translate-y-2"
+                  <div 
+                     key={i} className="glass-panel p-8 rounded-[2rem] border border-brand-border hover:border-brand-primary/30 transition-all hover:-translate-y-2 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
                   >
                      <div className="w-16 h-16 bg-brand-bg rounded-2xl flex items-center justify-center mb-6 shadow-md border border-brand-border">
                         {f.icon}
                      </div>
                      <h3 className="text-2xl font-bold mb-3">{f.title}</h3>
                      <p className="text-brand-muted leading-relaxed text-lg">{f.description}</p>
-                  </motion.div>
+                  </div>
                ))}
             </div>
          </div>
@@ -140,9 +135,9 @@ export default function LandingPage() {
                
                <div className="space-y-8">
                   {steps.map((step, i) => (
-                     <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }} key={i} className="flex gap-6">
+                     <div key={i} className="flex gap-6">
                         <div className="flex flex-col items-center">
-                           <div className="w-12 h-12 bg-brand-primary/20 text-brand-primary rounded-full flex items-center justify-center font-black text-lg border border-brand-primary/30 shrink-0">
+                           <div className="w-12 h-12 bg-brand-primary/20 text-brand-primary rounded-full flex items-center justify-center font-black text-lg border border-brand-primary/30 shrink-0 animate-pulse">
                               {step.num}
                            </div>
                            {i !== 2 && <div className="w-0.5 h-12 bg-brand-border mt-2"></div>}
@@ -151,14 +146,13 @@ export default function LandingPage() {
                            <h3 className="text-xl font-bold mb-2">{step.title}</h3>
                            <p className="text-brand-muted text-lg">{step.text}</p>
                         </div>
-                     </motion.div>
+                     </div>
                   ))}
                </div>
             </div>
             
             <div className="lg:w-1/2 w-full">
-               <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }}
+               <div 
                   className="glass-panel p-2 rounded-[2rem] border border-brand-border shadow-2xl relative"
                >
                   <div className="absolute -inset-1 bg-gradient-to-r from-brand-primary to-blue-500 rounded-[2rem] blur opacity-20"></div>
@@ -181,7 +175,7 @@ export default function LandingPage() {
                         </div>
                      </div>
                   </div>
-               </motion.div>
+               </div>
             </div>
          </div>
       </section>
@@ -195,28 +189,24 @@ export default function LandingPage() {
             
             <div className="space-y-4">
                {faqs.map((faq, i) => (
-                  <motion.div 
-                     initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
+                  <div 
                      key={i} className="glass-panel border border-brand-border rounded-2xl overflow-hidden"
                   >
                      <button 
                         onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                        className="w-full px-6 py-6 text-left flex justify-between items-center hover:bg-white/5 transition-colors"
+                        className="w-full px-6 py-6 text-left flex justify-between items-center hover:bg-white/5 transition-colors cursor-pointer"
                      >
                         <span className="font-bold text-lg">{faq.q}</span>
                         <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${openFaq === i ? 'rotate-180 text-brand-primary' : 'text-brand-muted'}`} />
                      </button>
-                     <AnimatePresence>
-                        {openFaq === i && (
-                           <motion.div 
-                              initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }}
-                              className="px-6 pb-6 text-brand-muted text-lg leading-relaxed"
-                           >
+                     <div className={`grid transition-all duration-300 ease-in-out ${openFaq === i ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                        <div className="overflow-hidden">
+                           <div className="px-6 pb-6 text-brand-muted text-lg leading-relaxed pt-2 border-t border-brand-border/10">
                               {faq.a}
-                           </motion.div>
-                        )}
-                     </AnimatePresence>
-                  </motion.div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
                ))}
             </div>
          </div>
@@ -228,7 +218,7 @@ export default function LandingPage() {
          <div className="max-w-4xl mx-auto relative z-10 glass-panel p-16 rounded-[3rem] border border-brand-border shadow-[0_0_50px_rgba(139,92,246,0.15)]">
             <h2 className="text-5xl font-bold mb-6">Stop memorizing. <br/>Start mastering.</h2>
             <p className="text-xl text-brand-muted mb-10">Join thousands of proactive learners breaking the curve today.</p>
-            <button onClick={() => navigate('/generate')} className="px-10 py-5 bg-brand-primary text-white rounded-2xl font-bold text-xl hover:scale-105 transition-all shadow-xl shadow-brand-primary/30 flex items-center gap-3 mx-auto">
+            <button onClick={() => navigate('/generate')} className="px-10 py-5 bg-brand-primary text-white rounded-2xl font-bold text-xl hover:scale-105 transition-all shadow-xl shadow-brand-primary/30 flex items-center gap-3 mx-auto cursor-pointer">
                Try Cognify For Free <ArrowRight className="w-6 h-6" />
             </button>
          </div>

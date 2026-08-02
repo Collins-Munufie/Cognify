@@ -12,14 +12,23 @@ export default function Logo({ size = 'default', className = '', showText = true
     xl: 'h-40'
   };
 
+  const dimensions = {
+    small: { width: 70, height: 56 },
+    default: { width: 100, height: 80 },
+    large: { width: 160, height: 128 },
+    xl: { width: 200, height: 160 }
+  };
+
   return (
     <div 
       className={`flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity ${className}`} 
       onClick={() => navigate('/')}
     >
       <img 
-        src="/logo.png" 
+        src="/logo.webp" 
         alt="Cognify Logo" 
+        width={dimensions[size].width}
+        height={dimensions[size].height}
         className={`${sizes[size]} object-contain`}
         onError={(e) => {
           // Fallback if the user hasn't saved the image to public/logo.png yet

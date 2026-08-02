@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, Check, X, RotateCcw, BrainCircuit, Play, Layers, CheckCircle2, Type, ArrowRight, Target, AlignLeft, BookOpen, Headphones, PlayCircle, PauseCircle, StopCircle, Hash, FileText } from 'lucide-react';
 import api, { getErrorMessage } from '../lib/api';
-import ReactMarkdown from 'react-markdown';
 import StudyChat from './StudyChat';
 import { useAuth } from '../context/AuthContext';
+
+const MarkdownRenderer = lazy(() => import('./MarkdownRenderer'));
 
 export default function StudyMode() {
   const { setId } = useParams();
@@ -682,22 +683,9 @@ export default function StudyMode() {
               {activeMode === 'notes' && (
                  <div className="w-full text-left space-y-6">
                     <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
-                      <ReactMarkdown
-                        components={{
-                            h1: (props) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
-                            h2: (props) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
-                            h3: (props) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
-                            p: (props) => <p className="text-brand-muted leading-relaxed text-lg mb-4" {...props} />,
-                            ul: (props) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-muted text-lg ml-4" {...props} />,
-                            ol: (props) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-muted text-lg ml-4" {...props} />,
-                            li: (props) => <li className="leading-relaxed" {...props} />,
-                            strong: (props) => <strong className="font-bold text-brand-primary" {...props} />,
-                            em: (props) => <em className="italic text-brand-text" {...props} />,
-                            blockquote: (props) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />
-                        }}
-                      >
-                        {summary}
-                      </ReactMarkdown>
+                      <Suspense fallback={<div className="h-40 w-full bg-brand-surface animate-pulse border border-brand-border rounded-3xl" />}>
+                        <MarkdownRenderer content={summary} mode="notes" />
+                      </Suspense>
                     </div>
                    {keyPoints.length > 0 && (
                      <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
@@ -1131,22 +1119,9 @@ export default function StudyMode() {
                         </div>
                      </div>
                      <div className="text-left">
-                        <ReactMarkdown
-                          components={{
-                            h1: (props) => <h1 className="text-3xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
-                            h2: (props) => <h2 className="text-2xl font-bold mt-8 mb-4 text-brand-text" {...props} />,
-                            h3: (props) => <h3 className="text-xl font-bold mt-6 mb-3 text-brand-text" {...props} />,
-                            p: (props) => <p className="text-brand-text leading-relaxed text-lg mb-4 font-medium" {...props} />,
-                            ul: (props) => <ul className="list-disc list-inside space-y-2 mb-4 text-brand-text text-lg ml-4" {...props} />,
-                            ol: (props) => <ol className="list-decimal list-inside space-y-2 mb-4 text-brand-text text-lg ml-4" {...props} />,
-                            li: (props) => <li className="leading-relaxed" {...props} />,
-                            strong: (props) => <strong className="font-bold text-brand-primary" {...props} />,
-                            em: (props) => <em className="italic opacity-80" {...props} />,
-                            blockquote: (props) => <blockquote className="border-l-4 border-brand-primary pl-4 my-4 italic text-brand-muted" {...props} />
-                          }}
-                        >
-                          {flashcardSet.tutor_lesson}
-                        </ReactMarkdown>
+                        <Suspense fallback={<div className="h-40 w-full bg-brand-surface animate-pulse border border-brand-border rounded-3xl" />}>
+                          <MarkdownRenderer content={flashcardSet.tutor_lesson} mode="tutor" />
+                        </Suspense>
                      </div>
                    </div>
                 </div>

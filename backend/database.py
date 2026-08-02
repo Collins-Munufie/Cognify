@@ -5,8 +5,34 @@ from dotenv import load_dotenv
 
 load_dotenv(override=True)
 
+import urllib.parse
+
+def clean_database_url(url: str) -> str:
+    if not url:
+        return url
+    parts = url.split("://", 1)
+    if len(parts) < 2:
+        return url
+    scheme, rest = parts
+    if "@" in rest:
+        cred_host_split = rest.rsplit("@", 1)
+        cred = cred_host_split[0]
+        host_path = cred_host_split[1]
+        if ":" in cred:
+            user, pwd = cred.split(":", 1)
+            # Safe characters like '/' are not in credentials anyway.
+            # We unquote first to prevent double-encoding.
+            encoded_user = urllib.parse.quote(urllib.parse.unquote(user))
+            encoded_pwd = urllib.parse.quote(urllib.parse.unquote(pwd))
+            cleaned_rest = f"{encoded_user}:{encoded_pwd}@{host_path}"
+        else:
+            encoded_cred = urllib.parse.quote(urllib.parse.unquote(cred))
+            cleaned_rest = f"{encoded_cred}@{host_path}"
+        url = f"{scheme}://{cleaned_rest}"
+    return url
+
 # Get the database URL from the environment
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = clean_database_url(os.getenv("DATABASE_URL"))
 
 # If no DATABASE_URL is provided, fallback to local SQLite for development
 if not DATABASE_URL:
