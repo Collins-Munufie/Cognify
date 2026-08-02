@@ -141,3 +141,12 @@ body {
   animation: fadeInUpDelayed 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Custom utility to hide scrollbars on scroll menus */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+

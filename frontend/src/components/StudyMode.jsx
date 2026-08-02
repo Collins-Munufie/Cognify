@@ -374,6 +374,7 @@ export default function StudyMode() {
   const blanksList = flashcardSet.fill_blanks || [];
   const shortList = flashcardSet.short_questions || [];
   const trueFalseList = flashcardSet.true_false || [];
+  const definitionsList = flashcardSet.definitions || [];
   return (
     <div className="min-h-screen flex bg-brand-bg relative">
       {/* Mobile Sticky Header and Nav Bar */}
@@ -494,6 +495,19 @@ export default function StudyMode() {
             </button>
           )}
           
+          {definitionsList.length > 0 && (
+            <button 
+              onClick={() => setActiveMode('definitions')} 
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
+                activeMode === 'definitions' 
+                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
+                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <BookOpen className="w-3.5 h-3.5" /> <span>Definitions</span>
+            </button>
+          )}
+          
           {flashcardSet?.raw_content && (
             <button 
               onClick={() => setActiveMode('content')} 
@@ -552,6 +566,11 @@ export default function StudyMode() {
                <BrainCircuit className="w-5 h-5 shrink-0" /> <span>Tutor Lesson</span>
              </button>
            )}
+           {definitionsList.length > 0 && (
+             <button onClick={() => setActiveMode('definitions')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-left ${activeMode === 'definitions' ? 'bg-brand-primary/10 text-brand-primary font-bold shadow-sm border border-brand-primary/20' : 'text-brand-muted hover:bg-black/5'}`}>
+               <BookOpen className="w-5 h-5 shrink-0" /> <span>Definitions</span>
+             </button>
+           )}
            {flashcardSet?.raw_content && (
              <button onClick={() => setActiveMode('content')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-left ${activeMode === 'content' ? 'bg-brand-primary/10 text-brand-primary font-bold shadow-sm border border-brand-primary/20' : 'text-brand-muted hover:bg-black/5'}`}>
                <AlignLeft className="w-5 h-5 shrink-0" /> <span>Content</span>
@@ -577,6 +596,7 @@ export default function StudyMode() {
             {activeMode === 'fill_blanks' && `Blank ${testIndex + 1} of ${blanksList.length}`}
             {activeMode === 'written_test' && `${shortList.length} Practice Questions`}
             {activeMode === 'tutor_lesson' && `Learning Module`}
+            {activeMode === 'definitions' && `Definition Library`}
             {activeMode === 'content' && `Raw Data Source`}
           </div>
         </div>
@@ -739,7 +759,7 @@ export default function StudyMode() {
                       <Target className="w-4 h-4" /> {getMasteryLabel(masteryLevels[cards[currentIndex].id]||0)}
                     </span>
                   </div>
-                  <div className="w-full h-[400px] perspective-1000 relative max-w-3xl">
+                  <div className="w-full h-[280px] sm:h-[400px] perspective-1000 relative max-w-3xl">
                     <motion.div
                       className="w-full h-full relative preserve-3d cursor-pointer"
                       animate={{ rotateX: isFlipped ? 180 : 0 }}
@@ -748,46 +768,46 @@ export default function StudyMode() {
                       onClick={() => setIsFlipped(!isFlipped)}
                     >
                       <div 
-                        className="absolute w-full h-full backface-hidden glass-panel rounded-3xl p-10 flex flex-col items-center justify-center text-center shadow-xl border border-brand-border hover:border-brand-primary/50 transition-all"
+                        className="absolute w-full h-full backface-hidden glass-panel rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center text-center shadow-xl border border-brand-border hover:border-brand-primary/50 transition-all"
                         style={{ backfaceVisibility: 'hidden' }}
                       >
-                        <h2 className="text-3xl md:text-4xl font-medium leading-tight text-brand-text">{cards[currentIndex].question}</h2>
-                        <p className="absolute bottom-6 text-brand-muted animate-pulse font-medium">Click card to reveal</p>
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-medium leading-tight text-brand-text px-4">{cards[currentIndex].question}</h2>
+                        <p className="absolute bottom-6 text-brand-muted animate-pulse font-medium text-sm">Click card to reveal</p>
                       </div>
 
                       <div 
-                        className="absolute w-full h-full backface-hidden rounded-3xl p-10 flex flex-col items-center justify-center text-center shadow-[0_0_30px_rgba(139,92,246,0.2)] border-2 border-brand-primary/50 bg-brand-surface"
+                        className="absolute w-full h-full backface-hidden rounded-3xl p-6 sm:p-10 flex flex-col items-center justify-center text-center shadow-[0_0_30px_rgba(139,92,246,0.2)] border-2 border-brand-primary/50 bg-brand-surface"
                         style={{ backfaceVisibility: 'hidden', transform: 'rotateX(180deg)' }}
                       >
-                        <p className="text-2xl md:text-3xl font-medium leading-relaxed text-brand-text">{cards[currentIndex].answer}</p>
+                        <p className="text-lg sm:text-xl md:text-2xl font-medium leading-relaxed text-brand-text px-4">{cards[currentIndex].answer}</p>
                       </div>
                     </motion.div>
-                    
-                    <motion.div className="flex gap-4 mt-8 w-full h-16 relative justify-center">
-                      <AnimatePresence>
-                        {isFlipped && (
-                          <motion.div 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="w-full flex gap-4 absolute inset-0"
-                          >
-                            <button 
-                              onClick={() => handleProgress(false)}
-                              className="flex-1 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
-                            >
-                              <X className="w-5 h-5" /> Needs Review
-                            </button>
-                            <button 
-                              onClick={() => handleProgress(true)}
-                              className="flex-1 py-4 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
-                            >
-                              <Check className="w-5 h-5" /> Got It
-                            </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
                   </div>
+                  
+                  <motion.div className="flex gap-4 mt-8 w-full h-16 relative justify-center max-w-3xl">
+                    <AnimatePresence>
+                      {isFlipped && (
+                        <motion.div 
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="w-full flex gap-4 absolute inset-0"
+                        >
+                          <button 
+                            onClick={() => handleProgress(false)}
+                            className="flex-1 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                          >
+                            <X className="w-5 h-5" /> Needs Review
+                          </button>
+                          <button 
+                            onClick={() => handleProgress(true)}
+                            className="flex-1 py-4 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                          >
+                            <Check className="w-5 h-5" /> Got It
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
                 </>
               )}
             </>
@@ -1147,6 +1167,23 @@ export default function StudyMode() {
                 </div>
               )}
 
+              {/* DEFINITIONS MODE */}
+              {activeMode === 'definitions' && definitionsList.length > 0 && (
+                <div className="w-full text-left space-y-6">
+                   <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-brand-border shadow-lg">
+                     <h2 className="text-2xl font-bold text-brand-text mb-6">Definition Library</h2>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {definitionsList.map((def, idx) => (
+                           <div key={idx} className="p-5 bg-brand-surface rounded-2xl border border-brand-border hover:border-brand-primary/30 transition-all hover:scale-[1.01] shadow-sm">
+                              <strong className="text-brand-text text-base block mb-2">{def.term}</strong>
+                              <p className="text-brand-muted text-sm leading-relaxed">{def.definition}</p>
+                           </div>
+                        ))}
+                     </div>
+                   </div>
+                </div>
+              )}
+
               {/* CONTENT MODE */}
               {activeMode === 'content' && flashcardSet?.raw_content && (
                 <div className="w-full text-left space-y-6">
@@ -1204,8 +1241,8 @@ export default function StudyMode() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden flex flex-col">
-                <StudyChat rawContent={flashcardSet?.raw_content || ""} />
+              <div className="flex-1 overflow-hidden flex flex-col h-full">
+                <StudyChat rawContent={flashcardSet?.raw_content || ""} className="w-full h-full border-0 bg-transparent shadow-none" />
               </div>
             </motion.div>
           </>

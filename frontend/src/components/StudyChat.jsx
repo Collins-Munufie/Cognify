@@ -3,7 +3,7 @@ import { Bot, Send, BrainCircuit, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api, { getErrorMessage } from '../lib/api';
 
-export default function StudyChat({ rawContent }) {
+export default function StudyChat({ rawContent, className = "h-[calc(100vh-6rem)] w-80 lg:w-96 glass-panel border border-brand-border rounded-3xl sticky top-8" }) {
   const [messages, setMessages] = useState([
     { id: 1, text: "Here to help you learn! Ask me anything about the material.", sender: 'ai' }
   ]);
@@ -39,7 +39,7 @@ export default function StudyChat({ rawContent }) {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-6rem)] w-full w-80 lg:w-96 glass-panel border border-brand-border rounded-3xl overflow-hidden sticky top-8">
+    <div className={`flex flex-col overflow-hidden ${className}`}>
       <div className="flex bg-brand-surface p-4 border-b border-brand-border items-center gap-3">
         <Bot className="w-6 h-6 text-brand-primary" />
         <h3 className="font-semibold">AI Study Assistant</h3>
