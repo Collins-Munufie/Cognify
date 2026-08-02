@@ -267,8 +267,8 @@ export default function Dashboard() {
          <div className="glass-panel p-8 rounded-[2.5rem] border border-brand-border bg-gradient-to-r from-brand-surface to-brand-primary/5 shadow-lg mb-10 overflow-hidden relative">
             <div className="absolute right-0 top-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
             <div className="z-10">
-              <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-brand-text mb-3">Welcome back, {dashboardData.user.name}</h1>
-              <p className="text-brand-muted text-base sm:text-lg max-w-xl font-medium leading-relaxed">Accelerate your active recall with custom spaced repetition and advanced AI-driven study modules.</p>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-brand-text mb-3">Welcome back, {dashboardData.user.name}</h1>
+              <p className="text-brand-muted text-sm sm:text-base max-w-xl font-medium leading-relaxed">Accelerate your active recall with custom spaced repetition and advanced AI-driven study modules.</p>
             </div>
          </div>
 
