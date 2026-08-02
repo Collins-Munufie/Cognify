@@ -121,15 +121,86 @@ def get_user_flashcard_sets(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
+    from sqlalchemy.orm import defer
+    from sqlalchemy import func
+
     sets = (
         db.query(models.FlashcardSet)
-        .options(selectinload(models.FlashcardSet.flashcards))
+        .options(
+            defer(models.FlashcardSet.raw_content),
+            defer(models.FlashcardSet.tutor_lesson),
+            defer(models.FlashcardSet.podcast_script)
+        )
         .filter(models.FlashcardSet.user_id == current_user.id)
         .order_by(models.FlashcardSet.last_accessed.desc(), models.FlashcardSet.created_at.desc())
         .all()
     )
 
-    return [serialize_flashcard_set(s) for s in sets]
+    if not sets:
+        return []
+
+    set_ids = [s.id for s in sets]
+
+    # Pre-fetch counts in exactly two bulk aggregation queries to avoid N+1 database queries
+    total_counts = dict(
+        db.query(models.Flashcard.set_id, func.count(models.Flashcard.id))
+        .filter(models.Flashcard.set_id.in_(set_ids))
+        .group_by(models.Flashcard.set_id)
+        .all()
+    )
+    
+    mastered_counts = dict(
+        db.query(models.Flashcard.set_id, func.count(models.Flashcard.id))
+        .filter(models.Flashcard.set_id.in_(set_ids), models.Flashcard.mastery_level == 3)
+        .group_by(models.Flashcard.set_id)
+        .all()
+    )
+
+    # Pre-check existence of heavy deferred columns in SQL to prevent implicit N+1 lazy loading
+    presence_info = {
+        row[0]: {
+            "has_podcast": bool(row[1]),
+            "has_tutor": bool(row[2]),
+            "has_raw_content": bool(row[3])
+        }
+        for row in db.query(
+            models.FlashcardSet.id,
+            models.FlashcardSet.podcast_script != None,
+            models.FlashcardSet.tutor_lesson != None,
+            models.FlashcardSet.raw_content != None
+        )
+        .filter(models.FlashcardSet.id.in_(set_ids))
+        .all()
+    }
+
+    result = []
+    for s in sets:
+        fc_count = total_counts.get(s.id, 0)
+        mastered_count = mastered_counts.get(s.id, 0)
+        p_info = presence_info.get(s.id, {"has_podcast": False, "has_tutor": False, "has_raw_content": False})
+        
+        gen_modes = []
+        if s.summary: gen_modes.append("Notes")
+        if fc_count > 0: gen_modes.append("Flashcards")
+        if p_info["has_podcast"]: gen_modes.append("Podcast")
+        if s.quiz: gen_modes.append("Quiz")
+        if s.fill_blanks: gen_modes.append("Fill-Blanks")
+        if s.short_questions: gen_modes.append("Written")
+        if s.true_false: gen_modes.append("True/False")
+        if p_info["has_tutor"]: gen_modes.append("Tutor")
+        if s.definitions: gen_modes.append("Definitions")
+        if p_info["has_raw_content"]: gen_modes.append("Content")
+        
+        result.append({
+            "id": s.id,
+            "title": s.title,
+            "created_at": s.created_at,
+            "last_accessed": s.last_accessed,
+            "flashcards_count": fc_count,
+            "mastered_count": mastered_count,
+            "generated_modes": gen_modes
+        })
+    return result
 
 @router.get("/{set_id}")
 def get_user_flashcard_set(

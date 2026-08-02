@@ -119,22 +119,40 @@ export default function Dashboard() {
     };
 
     const summary = sets.reduce((acc, set) => {
-      const mastered = set.flashcards.filter(c => c.mastery_level === 3).length;
-      const setPercent = set.flashcards.length > 0 ? Math.round((mastered / set.flashcards.length) * 100) : 0;
-      const generatedModes = [];
-      const modeCounts = { ...acc.modeCounts };
-
-      if (set.summary) { generatedModes.push("Notes"); modeCounts.Notes += 1; }
-      if (set.flashcards && set.flashcards.length > 0) { generatedModes.push("Flashcards"); modeCounts.Flashcards += 1; }
-      if (set.podcast_script) { generatedModes.push("Podcast"); modeCounts.Podcast += 1; }
-      if (set.quiz && set.quiz.length > 0) { generatedModes.push("Quiz"); modeCounts.Quiz += 1; }
-      if (set.fill_blanks && set.fill_blanks.length > 0) { generatedModes.push("Fill-Blanks"); modeCounts["Fill-in-the-Blank"] += 1; }
-      if (set.short_questions && set.short_questions.length > 0) { generatedModes.push("Written"); modeCounts["Written Test"] += 1; }
-      if (set.true_false && set.true_false.length > 0) { generatedModes.push("True/False"); modeCounts["True/False"] += 1; }
-      if (set.tutor_lesson) { generatedModes.push("Tutor"); modeCounts["Tutor Lesson"] += 1; }
-      if (set.definitions && set.definitions.length > 0) { generatedModes.push("Definitions"); }
-      if (set.raw_content) { generatedModes.push("Content"); modeCounts.Content += 1; }
+      // Robust mapping supporting both lightweight metadata endpoint and fallback full schema
+      const totalCards = typeof set.flashcards_count === 'number' ? set.flashcards_count : (set.flashcards ? set.flashcards.length : 0);
+      const mastered = typeof set.mastered_count === 'number' ? set.mastered_count : (set.flashcards ? set.flashcards.filter(c => c.mastery_level === 3).length : 0);
+      const setPercent = totalCards > 0 ? Math.round((mastered / totalCards) * 100) : 0;
       
+      let generatedModes = [];
+      if (set.generated_modes) {
+        generatedModes = set.generated_modes;
+      } else {
+        if (set.summary) generatedModes.push("Notes");
+        if (set.flashcards && set.flashcards.length > 0) generatedModes.push("Flashcards");
+        if (set.podcast_script) generatedModes.push("Podcast");
+        if (set.quiz && set.quiz.length > 0) generatedModes.push("Quiz");
+        if (set.fill_blanks && set.fill_blanks.length > 0) generatedModes.push("Fill-Blanks");
+        if (set.short_questions && set.short_questions.length > 0) generatedModes.push("Written");
+        if (set.true_false && set.true_false.length > 0) generatedModes.push("True/False");
+        if (set.tutor_lesson) generatedModes.push("Tutor");
+        if (set.definitions && set.definitions.length > 0) generatedModes.push("Definitions");
+        if (set.raw_content) generatedModes.push("Content");
+      }
+      
+      const modeCounts = { ...acc.modeCounts };
+      generatedModes.forEach(m => {
+        if (m === "Notes") modeCounts.Notes += 1;
+        if (m === "Flashcards") modeCounts.Flashcards += 1;
+        if (m === "Podcast") modeCounts.Podcast += 1;
+        if (m === "Quiz") modeCounts.Quiz += 1;
+        if (m === "Fill-Blanks") modeCounts["Fill-in-the-Blank"] += 1;
+        if (m === "Written") modeCounts["Written Test"] += 1;
+        if (m === "True/False") modeCounts["True/False"] += 1;
+        if (m === "Tutor") modeCounts["Tutor Lesson"] += 1;
+        if (m === "Content") modeCounts.Content += 1;
+      });
+
       const lastTime = new Date(set.last_accessed || set.created_at).getTime();
       const mappedSet = {
          ...set,
@@ -144,7 +162,7 @@ export default function Dashboard() {
       };
 
       return {
-        totalCards: acc.totalCards + set.flashcards.length,
+        totalCards: acc.totalCards + totalCards,
         masteredCards: acc.masteredCards + mastered,
         modeCounts,
         mappedSets: [...acc.mappedSets, mappedSet],

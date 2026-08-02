@@ -49,9 +49,11 @@ else:
         DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
         
     SQLALCHEMY_DATABASE_URL = DATABASE_URL
-    # For PostgreSQL (Supabase/Neon), we do NOT pass check_same_thread
+    # For PostgreSQL (Supabase/Neon), configure optimized pool limits for high concurrency
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
+        pool_size=15,
+        max_overflow=25,
         pool_pre_ping=True,
         pool_recycle=300,
         connect_args={"connect_timeout": 10},
