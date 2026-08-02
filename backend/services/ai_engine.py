@@ -415,7 +415,75 @@ def validate_and_clean_questions(data: dict, text: str = "") -> dict:
             pass
     elif "summary" in data:
         data["summary"] = ""
-        
+
+    # 6. Flashcards
+    if "flashcards" in data and isinstance(data["flashcards"], list):
+        seen_exact = set()
+        seen_semantic = []
+        cleaned_fc = []
+        for fc in data["flashcards"]:
+            if not isinstance(fc, dict):
+                continue
+            question = str(fc.get("question", "")).strip()
+            answer = str(fc.get("answer", "")).strip()
+            difficulty = str(fc.get("difficulty", "medium")).strip().lower()
+            if not question or not answer:
+                continue
+            q_lower = question.lower()
+            if q_lower in seen_exact:
+                continue
+            if any(kw in q_lower or kw in answer.lower() for kw in invalid_keywords):
+                continue
+            is_dup = any(_word_overlap_ratio(question, ex) >= 0.50 for ex in seen_semantic)
+            if is_dup:
+                continue
+            seen_exact.add(q_lower)
+            seen_semantic.append(question)
+            cleaned_fc.append({
+                "question": question,
+                "answer": answer,
+                "difficulty": difficulty if difficulty in ("easy", "medium", "hard") else "medium"
+            })
+            
+        if len(cleaned_fc) < 10 and text:
+            terms = _keywords(text, 25)
+            sentences = _extract_sentences(text, 35)
+            used_questions = set(q.lower() for q in seen_exact)
+            
+            for term in terms:
+                if len(cleaned_fc) >= 10:
+                    break
+                pattern = re.compile(rf"\b{re.escape(term)}\b", re.IGNORECASE)
+                matching_sentence = None
+                for sent in sentences:
+                    if pattern.search(sent) and len(sent) > 30:
+                        if not any(_word_overlap_ratio(sent, ex) >= 0.50 for ex in seen_semantic):
+                            matching_sentence = sent
+                            break
+                if not matching_sentence:
+                    # Fallback to a relevant sentence
+                    for sent in sentences:
+                        if len(sent) > 40:
+                            if not any(_word_overlap_ratio(sent, ex) >= 0.50 for ex in seen_semantic):
+                                matching_sentence = sent
+                                break
+                if not matching_sentence:
+                    matching_sentence = sentences[0] if sentences else "This concept is a key topic in the uploaded material."
+                
+                fallback_q = f"Explain the concept and significance of {term}."
+                fallback_a = matching_sentence.strip()
+                fb_lower = fallback_q.lower()
+                if fb_lower in used_questions:
+                    continue
+                used_questions.add(fb_lower)
+                seen_semantic.append(fallback_q)
+                cleaned_fc.append({
+                    "question": fallback_q,
+                    "answer": fallback_a,
+                    "difficulty": "medium"
+                })
+        data["flashcards"] = cleaned_fc[:10]
+
     return data
 
 def _extract_sentences(text: str, limit: int = 15) -> list:
@@ -450,10 +518,36 @@ def _ensure_requested_modules(data: dict, text: str, modules: list) -> dict:
     first_sentence = sentences[0] if sentences else text[:160].strip() or "The source material contains study information."
 
     if "Flashcards" in modules and not data.get("flashcards"):
-        data["flashcards"] = [
-            {"question": f"What does the material say about {term}?", "answer": first_sentence, "difficulty": "easy"}
-            for term in (terms[:5] or ["the main topic"])
-        ]
+        flashcards_list = []
+        used_answers = set()
+        for term in (terms[:15] or ["the main topic"]):
+            if len(flashcards_list) >= 10:
+                break
+            pattern = re.compile(rf"\b{re.escape(term)}\b", re.IGNORECASE)
+            matching_sentence = None
+            for sent in sentences:
+                if pattern.search(sent) and len(sent) > 30 and sent.lower() not in used_answers:
+                    matching_sentence = sent
+                    break
+            if not matching_sentence:
+                matching_sentence = first_sentence
+            
+            flashcards_list.append({
+                "question": f"Explain the concept of {term} as discussed in the material.",
+                "answer": matching_sentence.strip(),
+                "difficulty": "medium"
+            })
+            used_answers.add(matching_sentence.lower())
+        
+        # Ensure we have exactly 10 flashcards even if terms count is small
+        while len(flashcards_list) < 10:
+            sent = sentences[len(flashcards_list) % len(sentences)] if sentences else first_sentence
+            flashcards_list.append({
+                "question": f"What is one of the key points discussed in this material regarding {terms[0] if terms else 'the main topic'}?",
+                "answer": sent.strip(),
+                "difficulty": "easy"
+            })
+        data["flashcards"] = flashcards_list
 
     if ("Multiple Choice (Quiz)" in modules or "Quiz" in modules) and not data.get("quiz"):
         all_sentences = _extract_sentences(text, 30)
@@ -732,10 +826,24 @@ DOCUMENT INFORMATION EXTRACTION (MANDATORY)
         if "Written Test" in modules:
             prompt += "- ALWAYS generate EXACTLY 25 Written Questions (`short_questions`) to allow rigorous validation, deduplication, and filtering down to the best 10.\n"
         if "Flashcards" in modules:
-            prompt += "- ALWAYS generate EXACTLY 15 Flashcards (`flashcards`)\n"
+            prompt += "- ALWAYS generate EXACTLY 10 Flashcards (`flashcards`)\n"
         if any(m in modules for m in ["True/False", "True / False", "True/False (Quiz)"]):
             prompt += "- ALWAYS generate EXACTLY 25 True/False Questions (`true_false`) to allow rigorous validation, deduplication, and filtering down to the best 15.\n"
         prompt += "- If text is too short, reduce intelligently without repetition or hallucination\n\n"
+
+    if "Flashcards" in modules:
+        prompt += """----------------------------------------
+FLASHCARD RULES
+----------------------------------------
+- Generate EXACTLY 10 relevant, high-quality, and material-centered flashcards.
+- Each flashcard must test a UNIQUE and important concept, term, or process from the uploaded material.
+- Questions must be clear, specific, and academically significant. Avoid generic questions (e.g., do NOT write "What does the material say about X?").
+- Answers must be concise, accurate explanations of the concept or answer to the question, based directly on the source material.
+- Assign a difficulty level ("easy", "medium", "hard") to each flashcard based on the depth of the concept.
+- Example: {"question": "What is the primary function of mitochondria?", "answer": "To generate most of the chemical energy needed to power the cell's biochemical reactions.", "difficulty": "easy"}
+- Output as a list of objects in the "flashcards" field.
+
+"""
 
     if "Fill-in-the-Blank" in modules:
         prompt += """----------------------------------------
