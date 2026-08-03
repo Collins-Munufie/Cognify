@@ -446,8 +446,8 @@ export default function StudyMode() {
       </aside>
 
       <main className="flex-1 md:pl-64 lg:pr-96 flex flex-col items-center pt-20 pb-24 md:pt-8 md:pb-8 px-4 relative min-h-screen">
-        <div className="w-full max-w-4xl flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-4 overflow-x-auto">
-          <div className="flex gap-2 min-w-max">
+         <div className="w-full max-w-4xl flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-4">
+           <div className="flex flex-wrap gap-2 justify-center">
             {[0,1,2,3].map(level => (
               <div key={level} className={`px-3 py-1 text-xs font-bold rounded-full ${getMasteryColor(level)}`}>
                 {mCounts[level]} {getMasteryLabel(level)}
@@ -588,14 +588,14 @@ export default function StudyMode() {
               {/* NOTES MODE */}
               {activeMode === 'notes' && (
                  <div className="w-full text-left space-y-6">
-                    <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
+                    <div className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-brand-border shadow-lg">
                       <Suspense fallback={<div className="h-40 w-full bg-brand-surface animate-pulse border border-brand-border rounded-3xl" />}>
                         <MarkdownRenderer content={summary} mode="notes" />
                       </Suspense>
                     </div>
                    {keyPoints.length > 0 && (
-                     <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
-                       <h2 className="text-2xl font-bold text-brand-text mb-6">Key Concepts</h2>
+                     <div className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-brand-border shadow-lg">
+                       <h2 className="text-xl sm:text-2xl font-bold text-brand-text mb-6">Key Concepts</h2>
                        <ul className="space-y-4">
                          {keyPoints.map((kp, i) => (
                             <li key={i} className="flex gap-4 items-start">
@@ -682,10 +682,10 @@ export default function StudyMode() {
               {activeMode === 'multiple_choice' && quizList.length > 0 && (
                 <div className="w-full max-w-4xl flex flex-col gap-8">
                   {quizList.map((q, qIndex) => (
-                    <div key={qIndex} className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
-                      <h2 className="text-xl md:text-2xl font-medium mb-6 text-brand-text flex items-start gap-4">
+                    <div key={qIndex} className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-brand-border shadow-lg">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-medium mb-6 text-brand-text flex items-start gap-4 break-words">
                          <span className="w-10 h-10 rounded-xl bg-brand-primary/20 text-brand-primary flex items-center justify-center font-bold text-sm shrink-0 shadow-inner mt-0.5">Q{qIndex + 1}</span> 
-                         <span className="leading-relaxed mt-1">{q.question}</span>
+                         <span className="leading-relaxed mt-1 break-words">{q.question}</span>
                       </h2>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {q.options.map((opt, i) => {
@@ -768,7 +768,7 @@ export default function StudyMode() {
                      const val = fibAnswers[index] || '';
                      const isCorrect = val.toLowerCase().trim() === blank.blank_word.toLowerCase().trim();
                      return (
-                        <div key={index} className="text-xl leading-relaxed font-medium bg-brand-surface p-8 rounded-3xl border border-brand-border shadow-md text-brand-text text-left">
+                        <div key={index} className="text-lg sm:text-xl leading-relaxed font-medium bg-brand-surface p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-brand-border shadow-md text-brand-text text-left break-words">
                            <span className="text-brand-primary mr-3 font-bold">{index + 1}.</span>
                            {blank.sentence.split('____').map((segment, i, arr) => {
                               if (i < arr.length - 1) {
@@ -851,9 +851,9 @@ export default function StudyMode() {
                        const selected = tfAnswers[index];
                        const isCorrect = selected === tf.answer;
                        return (
-                          <div key={index} className="flex flex-col md:flex-row gap-6 bg-brand-surface p-6 rounded-3xl border border-brand-border shadow-md text-brand-text items-center md:items-start">
+                          <div key={index} className="flex flex-col md:flex-row gap-4 sm:gap-6 bg-brand-surface p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-brand-border shadow-md text-brand-text items-center md:items-start w-full break-words">
                              <div className="flex-1 text-left w-full">
-                                <h3 className="text-xl font-medium mb-3"><span className="text-brand-primary font-bold mr-2">{index + 1}.</span> {tf.statement}</h3>
+                                <h3 className="text-lg sm:text-xl font-medium mb-3 break-words"><span className="text-brand-primary font-bold mr-2">{index + 1}.</span> {tf.statement}</h3>
                                 {tfRevealed && (
                                    <div className={`mt-4 p-4 rounded-xl border text-sm flex flex-col gap-1 ${isCorrect || selected === undefined ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-red-500/10 border-red-500/30 text-red-500'}`}>
                                       <span className="font-bold">{tf.answer ? 'True' : 'False'} is correct.</span>
@@ -920,8 +920,8 @@ export default function StudyMode() {
               {/* WRITTEN TEST MODE */}
               {activeMode === 'written_test' && (
                 <div className="w-full text-left space-y-6">
-                   <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
-                     <h2 className="text-2xl font-bold text-brand-text mb-6">Written Test</h2>
+                   <div className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-brand-border shadow-lg">
+                     <h2 className="text-xl sm:text-2xl font-bold text-brand-text mb-6">Written Test</h2>
                      {writtenGrading ? (
                         <div className="space-y-8">
                            <div className="p-6 bg-brand-primary/10 border border-brand-primary/30 rounded-2xl flex items-center justify-between">
@@ -932,26 +932,26 @@ export default function StudyMode() {
                               <div className="text-4xl font-black text-brand-primary">{writtenGrading.score}%</div>
                            </div>
                            
-                           {writtenGrading.evaluations?.map((evalItem, idx) => (
-                              <div key={idx} className="bg-brand-surface p-6 rounded-2xl border border-brand-border flex flex-col gap-4">
-                                 <h4 className="font-bold text-lg text-brand-text flex gap-3 items-start"><span className="text-brand-primary shrink-0">Q{idx+1}.</span> {evalItem.question}</h4>
+                            {writtenGrading.evaluations?.map((evalItem, idx) => (
+                              <div key={idx} className="bg-brand-surface p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-brand-border flex flex-col gap-4">
+                                 <h4 className="font-bold text-base sm:text-lg text-brand-text flex gap-3 items-start break-words"><span className="text-brand-primary shrink-0">Q{idx+1}.</span> <span className="break-words">{evalItem.question}</span></h4>
                                  
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="p-4 bg-brand-bg rounded-xl border border-brand-border">
+                                    <div className="p-4 bg-brand-bg rounded-xl border border-brand-border break-words">
                                        <span className="text-xs uppercase font-bold text-brand-muted tracking-wider block mb-2">Your Answer</span>
-                                       <p className="text-brand-text">{evalItem.user_answer || "No answer provided."}</p>
+                                       <p className="text-brand-text break-words">{evalItem.user_answer || "No answer provided."}</p>
                                     </div>
-                                    <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/20">
+                                    <div className="p-4 bg-green-500/10 rounded-xl border border-green-500/20 break-words">
                                        <span className="text-xs uppercase font-bold text-green-500 tracking-wider block mb-2">Ideal Answer</span>
-                                       <p className="text-green-400 font-medium">{evalItem.model_answer}</p>
+                                       <p className="text-green-400 font-medium break-words">{evalItem.model_answer}</p>
                                     </div>
                                  </div>
                                  
-                                 <div className="mt-2 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20 flex gap-3 items-start">
+                                 <div className="mt-2 p-4 bg-blue-500/10 rounded-xl border border-blue-500/20 flex gap-3 items-start break-words">
                                     <BrainCircuit className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                                    <div>
+                                    <div className="break-words">
                                        <span className="text-xs uppercase font-bold text-blue-400 tracking-wider block mb-1">Feedback</span>
-                                       <p className="text-blue-300 leading-relaxed">{evalItem.feedback}</p>
+                                       <p className="text-blue-300 leading-relaxed break-words">{evalItem.feedback}</p>
                                     </div>
                                  </div>
                               </div>
@@ -1016,7 +1016,7 @@ export default function StudyMode() {
               {/* TUTOR LESSON MODE */}
               {activeMode === 'tutor_lesson' && flashcardSet?.tutor_lesson && (
                 <div className="w-full text-left space-y-6">
-                   <div className="glass-panel p-8 rounded-3xl border border-brand-primary/30 shadow-[0_0_30px_rgba(139,92,246,0.1)] bg-brand-primary/5">
+                   <div className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-brand-primary/30 shadow-[0_0_30px_rgba(139,92,246,0.1)] bg-brand-primary/5">
                      <div className="flex items-center gap-4 mb-6 pt-2">
                         <div className="p-3 bg-brand-primary text-white rounded-2xl shadow-lg border border-brand-primary-hover"><BrainCircuit className="w-8 h-8" /></div>
                         <div>
@@ -1036,8 +1036,8 @@ export default function StudyMode() {
               {/* DEFINITIONS MODE */}
               {activeMode === 'definitions' && definitionsList.length > 0 && (
                 <div className="w-full text-left space-y-6">
-                   <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-brand-border shadow-lg">
-                     <h2 className="text-2xl font-bold text-brand-text mb-6">Definition Library</h2>
+                   <div className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-brand-border shadow-lg">
+                     <h2 className="text-xl sm:text-2xl font-bold text-brand-text mb-6">Definition Library</h2>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {definitionsList.map((def, idx) => (
                            <div key={idx} className="p-5 bg-brand-surface rounded-2xl border border-brand-border hover:border-brand-primary/30 transition-all hover:scale-[1.01] shadow-sm">
@@ -1053,8 +1053,8 @@ export default function StudyMode() {
               {/* CONTENT MODE */}
               {activeMode === 'content' && flashcardSet?.raw_content && (
                 <div className="w-full text-left space-y-6">
-                   <div className="glass-panel p-8 rounded-3xl border border-brand-border shadow-lg">
-                     <h2 className="text-2xl font-bold text-brand-text mb-4 flex items-center gap-3">
+                   <div className="glass-panel p-4 sm:p-8 rounded-2xl sm:rounded-3xl border border-brand-border shadow-lg">
+                     <h2 className="text-xl sm:text-2xl font-bold text-brand-text mb-4 flex items-center gap-3">
                         <FileText className="w-6 h-6 text-brand-muted" /> Source Content
                      </h2>
                      <div className="p-6 bg-brand-bg border border-brand-border rounded-2xl max-h-[70vh] overflow-y-auto custom-scrollbar">
