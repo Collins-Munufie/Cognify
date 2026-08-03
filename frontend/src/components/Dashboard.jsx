@@ -281,7 +281,7 @@ export default function Dashboard() {
             
                <button 
                   onClick={() => setEditProfileOpen(true)}
-                  className="flex items-center gap-3 cursor-pointer md:hover:bg-brand-surface/60 p-2 rounded-xl transition-all border border-transparent md:hover:border-brand-border md:hover:scale-102 active:scale-95 min-w-[44px] min-h-[44px] justify-center bg-transparent"
+                  className="flex items-center gap-3 cursor-pointer md:hover:bg-brand-surface/60 p-2 rounded-xl transition-all duration-75 border border-transparent md:hover:border-brand-border md:hover:scale-102 active:scale-95 min-w-[44px] min-h-[44px] justify-center bg-transparent"
                   aria-label="Open profile settings"
                >
                   <div className="w-10 h-10 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold border border-brand-primary/30 overflow-hidden shadow-inner shrink-0 animate-pulse">
@@ -409,7 +409,7 @@ export default function Dashboard() {
                    <div className="z-10 w-full lg:w-auto shrink-0">
                       <button 
                          onClick={() => handleContinue(dashboardData.recentSet)}
-                         className="w-full lg:w-auto px-8 py-4.5 bg-gradient-to-r from-brand-primary to-purple-600 hover:from-brand-primary-hover hover:to-purple-700 text-white rounded-2xl font-black text-base uppercase tracking-wider flex items-center justify-center gap-3 transition-all shadow-[0_4px_25px_rgba(139,92,246,0.3)] md:hover:scale-[1.03] active:scale-95 min-h-[48px] cursor-pointer"
+                         className="w-full lg:w-auto px-8 py-4.5 bg-gradient-to-r from-brand-primary to-purple-600 hover:from-brand-primary-hover hover:to-purple-700 text-white rounded-2xl font-black text-base uppercase tracking-wider flex items-center justify-center gap-3 transition-all duration-75 shadow-[0_4px_25px_rgba(139,92,246,0.3)] md:hover:scale-[1.03] active:scale-95 min-h-[48px] cursor-pointer"
                       >
                          Continue Learning <ArrowRight className="w-5 h-5" />
                       </button>
@@ -422,7 +422,7 @@ export default function Dashboard() {
                    </div>
                    <h3 className="text-2xl font-bold mb-2">No active study sessions</h3>
                    <p className="text-brand-muted mb-8 text-lg">Start building your knowledge tree gracefully.</p>
-                   <button onClick={() => navigate('/generate')} className="px-8 py-4 bg-brand-primary text-white rounded-xl font-bold md:hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] min-h-[48px]">Create New Study Set</button>
+                   <button onClick={() => navigate('/generate')} className="px-8 py-4 bg-brand-primary text-white rounded-xl font-bold md:hover:scale-105 active:scale-95 transition-all duration-75 shadow-[0_0_20px_rgba(139,92,246,0.3)] min-h-[48px]">Create New Study Set</button>
                 </div>
              )}
           </div>
@@ -551,10 +551,10 @@ export default function Dashboard() {
                      </div>
 
                       <div className="flex gap-3 mt-auto">
-                        <button onClick={() => handleContinue(set)} className="flex-1 py-3 bg-brand-surface md:hover:bg-brand-primary/10 active:bg-brand-primary/20 text-brand-text border border-brand-border rounded-xl transition-all flex items-center justify-center gap-2 font-bold active:scale-95 min-h-[44px]">
+                        <button onClick={() => handleContinue(set)} className="flex-1 py-3 bg-brand-surface md:hover:bg-brand-primary/10 active:bg-brand-primary/20 text-brand-text border border-brand-border rounded-xl transition-all duration-75 flex items-center justify-center gap-2 font-bold active:scale-95 min-h-[44px]">
                           Review
                         </button>
-                        <button onClick={() => handleContinue(set)} className="flex-1 py-3 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-md active:scale-95 min-h-[44px]">
+                        <button onClick={() => handleContinue(set)} className="flex-1 py-3 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl transition-all duration-75 flex items-center justify-center gap-2 font-bold shadow-md active:scale-95 min-h-[44px]">
                           <Play className="w-4 h-4" /> Continue
                         </button>
                       </div>
