@@ -19,7 +19,7 @@ class UserStats(Base):
     __tablename__ = "user_stats"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
     current_streak = Column(Integer, default=0)
     last_study_date = Column(DateTime, nullable=True)
     quiz_attempts = Column(Integer, default=0)
@@ -40,7 +40,7 @@ class ActivityLog(Base):
     __tablename__ = "activity_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
     date = Column(DateTime, default=datetime.datetime.utcnow)
     
     user = relationship("User")
@@ -65,7 +65,7 @@ class FlashcardSet(Base):
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     last_accessed = Column(DateTime, default=datetime.datetime.utcnow)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"))
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
 
     owner = relationship("User", back_populates="flashcard_sets")
     flashcards = relationship("Flashcard", back_populates="flashcard_set", cascade="all, delete-orphan")
@@ -77,6 +77,6 @@ class Flashcard(Base):
     question = Column(String)
     answer = Column(String)
     mastery_level = Column(Integer, default=0) # 0:Unfamiliar, 1:Learning, 2:Familiar, 3:Mastered
-    set_id = Column(Integer, ForeignKey("flashcard_sets.id", ondelete="CASCADE"))
+    set_id = Column(Integer, ForeignKey("flashcard_sets.id", ondelete="CASCADE"), index=True)
 
     flashcard_set = relationship("FlashcardSet", back_populates="flashcards")

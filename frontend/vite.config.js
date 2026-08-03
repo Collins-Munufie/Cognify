@@ -35,6 +35,12 @@ export default defineConfig({
             if (id.includes('axios')) {
                return 'vendor-axios';
             }
+            if (id.includes('framer-motion')) {
+               return 'vendor-framer';
+            }
+            if (id.includes('lucide-react')) {
+               return 'vendor-icons';
+            }
             // Other vendor code goes to a general vendor chunk
             return 'vendor-libs';
           }
