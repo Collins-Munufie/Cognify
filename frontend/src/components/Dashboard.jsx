@@ -41,21 +41,37 @@ export default function Dashboard() {
     }
   }, []);
 
-  // Poll for latest stats on load
+  // Poll for latest stats on load and in background (for real-time updates)
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       navigate('/');
       return;
     }
+    
+    const refreshData = async () => {
+       if (fetchUser) {
+          await fetchUser().catch(err => console.warn('Failed to refresh user stats in background:', err));
+       }
+       await Promise.allSettled([fetchSets(), fetchActivity()]);
+    };
+
     const bootstrap = async () => {
        setLoading(true);
        setError('');
-       await Promise.allSettled([fetchSets(), fetchActivity()]);
+       await refreshData();
        setLoading(false);
     };
+
     bootstrap();
-  }, [authLoading, user, navigate, fetchActivity, fetchSets]);
+
+    // Auto-refresh dashboard data every 10 seconds for real-time synchronization
+    const intervalId = setInterval(() => {
+       refreshData();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, [authLoading, user, navigate, fetchActivity, fetchSets, fetchUser]);
 
   const handleLogout = () => {
     logout();
@@ -258,12 +274,12 @@ export default function Dashboard() {
          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <Logo size="small" />
             
-            <div className="flex items-center gap-6">
-               <div 
+               <button 
                   onClick={() => setEditProfileOpen(true)}
-                  className="flex items-center gap-3 cursor-pointer hover:bg-brand-surface/60 p-2 rounded-xl transition-all border border-transparent hover:border-brand-border hover:scale-102"
+                  className="flex items-center gap-3 cursor-pointer md:hover:bg-brand-surface/60 p-2 rounded-xl transition-all border border-transparent md:hover:border-brand-border md:hover:scale-102 active:scale-95 min-w-[44px] min-h-[44px] justify-center bg-transparent"
+                  aria-label="Open profile settings"
                >
-                  <div className="w-10 h-10 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold border border-brand-primary/30 overflow-hidden shadow-inner shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-brand-primary/20 flex items-center justify-center text-brand-primary font-bold border border-brand-primary/30 overflow-hidden shadow-inner shrink-0 animate-pulse">
                      {dashboardData.user.profile_picture ? (
                         <img src={dashboardData.user.profile_picture} alt="Profile" className="w-full h-full object-cover animate-fade-in" />
                      ) : (
@@ -274,8 +290,7 @@ export default function Dashboard() {
                      <span className="text-sm font-bold text-brand-text leading-none mb-1">{dashboardData.user.name}</span>
                      <span className="text-[10px] text-brand-primary font-black uppercase tracking-wider leading-none">Pro Profile</span>
                   </div>
-               </div>
-            </div>
+               </button>
          </div>
       </header>
 
@@ -354,55 +369,58 @@ export default function Dashboard() {
             </motion.div>
          </div>
 
-         {/* 3. CONTINUE LEARNING (CRITICAL FEATURE) */}
-         <div className="mb-14">
-            <h3 className="text-2xl font-bold mb-6 flex items-center gap-3"><Compass className="w-6 h-6 text-brand-primary"/> Jump Back In</h3>
-            {dashboardData.recentSet ? (
-               <div className="glass-panel p-8 rounded-[2rem] border border-brand-border bg-gradient-to-br from-brand-surface to-brand-primary/5 flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group">
-                  <div className="absolute -right-20 -top-20 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl group-hover:bg-brand-primary/20 transition-all"></div>
-                  
-                  <div className="flex-1 z-10 w-full">
-                     <div className="flex items-center gap-3 mb-3">
-                        <span className="px-3 py-1 bg-brand-bg rounded-lg text-xs font-bold text-brand-muted border border-brand-border uppercase tracking-wide">Last Accessed: {new Date(dashboardData.recentSet.unixTime).toLocaleDateString()}</span>
-                        <div className="flex gap-1.5 flex-wrap">
-                          {dashboardData.recentSet.generatedModes.slice(0, 3).map(mode => (
-                             <span key={mode} className="px-3 py-1 bg-brand-primary/20 rounded-lg text-[10px] font-bold text-brand-primary border border-brand-primary/30 uppercase tracking-wider">{mode}</span>
-                          ))}
-                          {dashboardData.recentSet.generatedModes.length > 3 && (
-                             <span className="px-3 py-1 bg-brand-primary/20 rounded-lg text-[10px] font-bold text-brand-primary border border-brand-primary/30 uppercase tracking-wider">+{dashboardData.recentSet.generatedModes.length - 3} MORE</span>
-                          )}
-                        </div>
-                     </div>
-                     <h2 className="text-3xl md:text-4xl font-bold mb-4">{dashboardData.recentSet.title}</h2>
-                     
-                     <div className="flex items-center gap-4 max-w-sm">
-                        <div className="flex-1 h-3 bg-brand-bg rounded-full overflow-hidden border border-brand-border/50">
-                           <div className="h-full bg-gradient-to-r from-brand-primary to-blue-500 rounded-full" style={{ width: `${dashboardData.recentSet.progressPercent}%` }}></div>
-                        </div>
-                        <span className="font-bold text-brand-text">{dashboardData.recentSet.progressPercent}%</span>
-                     </div>
-                  </div>
+          {/* 3. CONTINUE LEARNING (CRITICAL FEATURE - REDESIGNED & TOUCH FRIENDLY) */}
+          <div className="mb-14">
+             <div className="flex items-center gap-2 mb-6">
+                <Compass className="w-6 h-6 text-brand-primary animate-pulse"/>
+                <h3 className="text-2xl font-bold text-brand-text">Jump Back In</h3>
+             </div>
+             {dashboardData.recentSet ? (
+                <div className="glass-panel p-6 sm:p-8 rounded-[2rem] border border-brand-primary/30 bg-gradient-to-br from-brand-surface via-brand-surface/90 to-brand-primary/10 flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden group shadow-[0_0_40px_rgba(139,92,246,0.08)]">
+                   <div className="absolute -right-20 -top-20 w-64 h-64 bg-brand-primary/15 rounded-full blur-3xl transition-all duration-500 group-hover:bg-brand-primary/25"></div>
+                   
+                   <div className="flex-1 z-10 w-full text-left">
+                      <div className="flex flex-wrap items-center gap-3 mb-4">
+                         <span className="px-3 py-1 bg-brand-bg/85 rounded-lg text-xs font-bold text-brand-muted border border-brand-border uppercase tracking-wide">Last Accessed: {new Date(dashboardData.recentSet.unixTime).toLocaleDateString()}</span>
+                         <div className="flex gap-1.5 flex-wrap">
+                           {dashboardData.recentSet.generatedModes.slice(0, 3).map(mode => (
+                              <span key={mode} className="px-2.5 py-1 bg-brand-primary/20 rounded-lg text-[9px] font-bold text-brand-primary border border-brand-primary/30 uppercase tracking-wider">{mode}</span>
+                           ))}
+                           {dashboardData.recentSet.generatedModes.length > 3 && (
+                              <span className="px-2.5 py-1 bg-brand-primary/20 rounded-lg text-[9px] font-bold text-brand-primary border border-brand-primary/30 uppercase tracking-wider">+{dashboardData.recentSet.generatedModes.length - 3} MORE</span>
+                           )}
+                         </div>
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-4 text-brand-text tracking-tight group-hover:text-brand-primary transition-colors">{dashboardData.recentSet.title}</h2>
+                      
+                      <div className="flex items-center gap-4 max-w-md bg-brand-bg/40 p-3.5 rounded-2xl border border-brand-border/40">
+                         <div className="flex-1 h-3 bg-brand-bg rounded-full overflow-hidden border border-brand-border/50">
+                            <div className="h-full bg-gradient-to-r from-brand-primary to-purple-500 rounded-full" style={{ width: `${dashboardData.recentSet.progressPercent}%` }}></div>
+                         </div>
+                         <span className="font-extrabold text-brand-text text-sm">{dashboardData.recentSet.progressPercent}% Mastered</span>
+                      </div>
+                   </div>
 
-                  <div className="z-10 w-full md:w-auto">
-                     <button 
-                        onClick={() => handleContinue(dashboardData.recentSet)}
-                        className="w-full md:w-auto px-10 py-5 bg-brand-text text-brand-bg hover:bg-brand-primary hover:text-white rounded-2xl font-bold text-lg flex items-center justify-center gap-3 transition-all shadow-xl hover:scale-105"
-                     >
-                        Continue Learning <ArrowRight className="w-6 h-6" />
-                     </button>
-                  </div>
-               </div>
-            ) : (
-               <div className="glass-panel p-10 rounded-3xl border border-dashed border-brand-border text-center flex flex-col items-center">
-                  <div className="w-20 h-20 bg-brand-primary/10 rounded-full flex items-center justify-center mb-6">
-                     <BookOpen className="w-10 h-10 text-brand-primary" />
-                  </div>
-                  <h3 className="text-2xl font-bold mb-2">No active study sessions</h3>
-                  <p className="text-brand-muted mb-8 text-lg">Start building your knowledge tree gracefully.</p>
-                  <button onClick={() => navigate('/generate')} className="px-8 py-4 bg-brand-primary text-white rounded-xl font-bold hover:scale-105 transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)]">Create New Study Set</button>
-               </div>
-            )}
-         </div>
+                   <div className="z-10 w-full lg:w-auto shrink-0">
+                      <button 
+                         onClick={() => handleContinue(dashboardData.recentSet)}
+                         className="w-full lg:w-auto px-8 py-4.5 bg-gradient-to-r from-brand-primary to-purple-600 hover:from-brand-primary-hover hover:to-purple-700 text-white rounded-2xl font-black text-base uppercase tracking-wider flex items-center justify-center gap-3 transition-all shadow-[0_4px_25px_rgba(139,92,246,0.3)] md:hover:scale-[1.03] active:scale-95 min-h-[48px] cursor-pointer"
+                      >
+                         Continue Learning <ArrowRight className="w-5 h-5" />
+                      </button>
+                   </div>
+                </div>
+             ) : (
+                <div className="glass-panel p-10 rounded-3xl border border-dashed border-brand-border text-center flex flex-col items-center">
+                   <div className="w-20 h-20 bg-brand-primary/10 rounded-full flex items-center justify-center mb-6">
+                      <BookOpen className="w-10 h-10 text-brand-primary" />
+                   </div>
+                   <h3 className="text-2xl font-bold mb-2">No active study sessions</h3>
+                   <p className="text-brand-muted mb-8 text-lg">Start building your knowledge tree gracefully.</p>
+                   <button onClick={() => navigate('/generate')} className="px-8 py-4 bg-brand-primary text-white rounded-xl font-bold md:hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(139,92,246,0.3)] min-h-[48px]">Create New Study Set</button>
+                </div>
+             )}
+          </div>
 
           {/* 4. ACTIVITY TRACKER */}
           <div className="mb-14">
@@ -465,7 +483,7 @@ export default function Dashboard() {
                      key={set.id} 
                      className="glass-panel p-6 rounded-2xl border border-brand-border flex flex-col h-full hover:shadow-[0_10px_30px_rgba(139,92,246,0.1)] transition-all relative group"
                   >
-                      <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                      <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-20">
                          {deleteConfirmId === set.id ? (
                             <div className="flex items-center gap-1.5 bg-red-500/10 border border-red-500/30 rounded-2xl px-3 py-1.5 backdrop-blur-xl shadow-lg animate-pulse">
                                <span className="text-[10px] font-black text-red-500 tracking-wider uppercase px-1">Delete?</span>
@@ -488,14 +506,14 @@ export default function Dashboard() {
                             <>
                                <button 
                                   onClick={() => setRenameModal({ open: true, id: set.id, title: set.title })} 
-                                  className="p-2 bg-brand-surface rounded-xl text-brand-muted hover:text-brand-primary hover:border-brand-primary/30 border border-brand-border/40 transition-all shadow-sm cursor-pointer hover:scale-105 active:scale-95" 
+                                  className="p-2 bg-brand-surface rounded-xl text-brand-muted hover:text-brand-primary hover:border-brand-primary/30 border border-brand-border/40 transition-all shadow-sm cursor-pointer md:hover:scale-105 active:scale-95 min-w-[32px] min-h-[32px] flex items-center justify-center" 
                                   title="Rename Set"
                                >
                                   <Edit2 className="w-3.5 h-3.5"/>
                                </button>
                                <button 
                                   onClick={() => setDeleteConfirmId(set.id)} 
-                                  className="p-2 bg-brand-surface rounded-xl text-brand-muted hover:bg-red-500 hover:text-white hover:border-red-500/30 border border-brand-border/40 transition-all shadow-sm cursor-pointer hover:scale-105 active:scale-95" 
+                                  className="p-2 bg-brand-surface rounded-xl text-brand-muted hover:bg-red-500 hover:text-white hover:border-red-500/30 border border-brand-border/40 transition-all shadow-sm cursor-pointer md:hover:scale-105 active:scale-95 min-w-[32px] min-h-[32px] flex items-center justify-center" 
                                   title="Delete Set"
                                >
                                   <Trash2 className="w-3.5 h-3.5"/>
@@ -527,14 +545,14 @@ export default function Dashboard() {
                        <div className="h-full bg-brand-primary" style={{ width: `${set.progressPercent}%` }}></div>
                      </div>
 
-                     <div className="flex gap-3 mt-auto">
-                       <button onClick={() => handleContinue(set)} className="flex-1 py-3 bg-brand-surface hover:bg-brand-primary/10 text-brand-text border border-brand-border rounded-xl transition-all flex items-center justify-center gap-2 font-medium">
-                         Review
-                       </button>
-                       <button onClick={() => handleContinue(set)} className="flex-1 py-3 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl transition-all flex items-center justify-center gap-2 font-medium shadow-md">
-                         <Play className="w-4 h-4" /> Continue
-                       </button>
-                     </div>
+                      <div className="flex gap-3 mt-auto">
+                        <button onClick={() => handleContinue(set)} className="flex-1 py-3 bg-brand-surface md:hover:bg-brand-primary/10 active:bg-brand-primary/20 text-brand-text border border-brand-border rounded-xl transition-all flex items-center justify-center gap-2 font-bold active:scale-95 min-h-[44px]">
+                          Review
+                        </button>
+                        <button onClick={() => handleContinue(set)} className="flex-1 py-3 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-md active:scale-95 min-h-[44px]">
+                          <Play className="w-4 h-4" /> Continue
+                        </button>
+                      </div>
                   </motion.div>
                ))}
             </div>
@@ -620,7 +638,7 @@ export default function Dashboard() {
                   className="w-full bg-brand-bg border border-brand-border rounded-xl p-4 text-brand-text outline-none focus:border-brand-primary mb-6"
                   placeholder="Enter new title..."
                />
-               <button onClick={handleRenameSet} className="w-full py-4 bg-brand-primary text-white font-bold rounded-xl hover:scale-105 transition-transform shadow-lg">Save Changes</button>
+                <button onClick={handleRenameSet} className="w-full py-4 bg-brand-primary text-white font-bold rounded-xl md:hover:scale-105 active:scale-95 transition-transform shadow-lg min-h-[48px]">Save Changes</button>
             </motion.div>
          </div>
       )}
