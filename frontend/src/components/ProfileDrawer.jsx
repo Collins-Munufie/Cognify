@@ -120,9 +120,10 @@ export default function ProfileDrawer({ isOpen, onClose, stats }) {
             <h3 className="text-base font-black text-white tracking-tight">Your Profile</h3>
             <button 
               onClick={onClose} 
-              className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer hover:scale-105 active:scale-95"
+              className="p-3 rounded-lg bg-white/20 hover:bg-white/30 text-white transition-all cursor-pointer md:hover:scale-105 active:scale-95 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              aria-label="Close Profile"
             >
-              <X className="w-4 h-4" />
+              <X className="w-5 h-5" />
             </button>
           </div>
 
@@ -203,7 +204,7 @@ export default function ProfileDrawer({ isOpen, onClose, stats }) {
             <button 
               onClick={handleSave} 
               disabled={loading}
-              className="w-full mt-4 py-3 bg-brand-primary hover:bg-brand-primary-hover text-white font-black rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md flex justify-center items-center gap-1.5 cursor-pointer text-xs uppercase tracking-wider"
+              className="w-full mt-4 py-4 bg-brand-primary hover:bg-brand-primary-hover text-white font-black rounded-xl md:hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md flex justify-center items-center gap-1.5 cursor-pointer text-xs uppercase tracking-wider min-h-[48px]"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-3.5 h-3.5"/> Save Profile</>}
             </button>
@@ -242,7 +243,7 @@ export default function ProfileDrawer({ isOpen, onClose, stats }) {
         <div className="p-4 border-t border-brand-border bg-brand-bg/50">
           <button 
             onClick={logout} 
-            className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-black transition-all flex justify-center items-center gap-1.5 text-xs uppercase tracking-wider cursor-pointer"
+            className="w-full py-4 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl font-black transition-all flex justify-center items-center gap-1.5 text-xs uppercase tracking-wider cursor-pointer min-h-[48px]"
           >
             <LogOut className="w-3.5 h-3.5" /> Logout Account
           </button>

@@ -23,6 +23,7 @@ export default function StudyMode() {
   
   const [activeMode, setActiveMode] = useState('notes');
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [podcastVoice, setPodcastVoice] = useState('Conversational Mode');
 
   const { fetchUser } = useAuth(); // AuthContext to refresh stats
@@ -377,150 +378,15 @@ export default function StudyMode() {
   const definitionsList = flashcardSet.definitions || [];
   return (
     <div className="min-h-screen flex bg-brand-bg relative">
-      {/* Mobile Sticky Header and Nav Bar */}
-      <div className="fixed top-0 left-0 right-0 z-20 flex flex-col bg-brand-surface/95 backdrop-blur-md border-b border-brand-border md:hidden">
-        <header className="h-14 flex items-center justify-between px-4">
-          <button onClick={() => navigate('/dashboard')} className="p-2 -ml-2 text-brand-muted hover:text-brand-text flex items-center justify-center rounded-lg">
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <span className="font-bold text-brand-text text-base truncate max-w-[60%]">
-            {flashcardSet?.title}
-          </span>
-          <button 
-            onClick={() => setMobileChatOpen(true)} 
-            className="p-2 -mr-2 text-brand-primary hover:text-brand-primary-hover flex items-center justify-center rounded-lg"
-            title="Ask AI Study Buddy"
-          >
-            <BrainCircuit className="w-6 h-6" />
-          </button>
-        </header>
-        
-        {/* Horizontal scroll of study modes */}
-        <nav className="flex gap-2 overflow-x-auto px-4 py-2 border-t border-brand-border/60 scrollbar-none whitespace-nowrap">
-          <button 
-            onClick={() => setActiveMode('notes')} 
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-              activeMode === 'notes' 
-                ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-            }`}
-          >
-            <AlignLeft className="w-3.5 h-3.5" /> <span>Notes</span>
-          </button>
-          
-          {quizList.length > 0 && (
-            <button 
-              onClick={() => setActiveMode('multiple_choice')} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-                activeMode === 'multiple_choice' 
-                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <Target className="w-3.5 h-3.5" /> <span>Multiple Choice</span>
-            </button>
-          )}
-          
-          <button 
-            onClick={() => setActiveMode('flashcards')} 
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-              activeMode === 'flashcards' 
-                ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" /> <span>Flashcards</span>
-          </button>
-          
-          <button 
-            onClick={() => setActiveMode('podcast')} 
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-              activeMode === 'podcast' 
-                ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-            }`}
-          >
-            <Headphones className="w-3.5 h-3.5" /> <span>Podcast</span>
-          </button>
-          
-          {blanksList.length > 0 && (
-            <button 
-              onClick={() => setActiveMode('fill_blanks')} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-                activeMode === 'fill_blanks' 
-                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <Type className="w-3.5 h-3.5" /> <span>Fill-in-the-Blank</span>
-            </button>
-          )}
-          
-          {shortList.length > 0 && (
-            <button 
-              onClick={() => setActiveMode('written_test')} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-                activeMode === 'written_test' 
-                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" /> <span>Written Test</span>
-            </button>
-          )}
-          
-          {trueFalseList.length > 0 && (
-            <button 
-              onClick={() => setActiveMode('true_false')} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-                activeMode === 'true_false' 
-                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" /> <span>True / False</span>
-            </button>
-          )}
-          
-          {flashcardSet?.tutor_lesson && (
-            <button 
-              onClick={() => setActiveMode('tutor_lesson')} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-                activeMode === 'tutor_lesson' 
-                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <BrainCircuit className="w-3.5 h-3.5" /> <span>Tutor Lesson</span>
-            </button>
-          )}
-          
-          {definitionsList.length > 0 && (
-            <button 
-              onClick={() => setActiveMode('definitions')} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-                activeMode === 'definitions' 
-                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <BookOpen className="w-3.5 h-3.5" /> <span>Definitions</span>
-            </button>
-          )}
-          
-          {flashcardSet?.raw_content && (
-            <button 
-              onClick={() => setActiveMode('content')} 
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all border shrink-0 ${
-                activeMode === 'content' 
-                  ? 'bg-brand-primary/10 text-brand-primary border-brand-primary/30 shadow-sm' 
-                  : 'text-brand-muted border-transparent hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <AlignLeft className="w-3.5 h-3.5" /> <span>Content</span>
-            </button>
-          )}
-        </nav>
+      {/* Simplified Mobile Sticky Header */}
+      <div className="fixed top-0 left-0 right-0 h-14 z-20 flex items-center justify-between bg-brand-surface/95 backdrop-blur-md border-b border-brand-border md:hidden px-4">
+        <button onClick={() => navigate('/dashboard')} className="p-3 -ml-2 text-brand-muted hover:text-brand-text flex items-center justify-center rounded-xl min-w-[44px] min-h-[44px] active:scale-90 transition-all" aria-label="Go Back">
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <span className="font-bold text-brand-text text-sm sm:text-base truncate max-w-[70%] text-center">
+          {flashcardSet?.title}
+        </span>
+        <div className="w-10"></div> {/* Balanced layout spacer */}
       </div>
 
       <aside className="w-64 fixed left-0 top-0 h-screen border-r border-brand-border bg-brand-surface pt-8 p-4 flex flex-col hidden md:flex z-10 overflow-y-auto">
@@ -579,7 +445,7 @@ export default function StudyMode() {
          </div>
       </aside>
 
-      <main className="flex-1 md:pl-64 lg:pr-96 flex flex-col items-center pt-28 md:pt-8 px-4 relative min-h-screen">
+      <main className="flex-1 md:pl-64 lg:pr-96 flex flex-col items-center pt-20 pb-24 md:pt-8 md:pb-8 px-4 relative min-h-screen">
         <div className="w-full max-w-4xl flex flex-col md:flex-row justify-between items-center mb-8 gap-4 px-4 overflow-x-auto">
           <div className="flex gap-2 min-w-max">
             {[0,1,2,3].map(level => (
@@ -633,18 +499,18 @@ export default function StudyMode() {
                 </p>
               )}
               
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 w-full">
                 {activeMode === 'flashcards' && mCounts[3] < flashcardSet.flashcards.length && (
                   <button 
                     onClick={studyUnmastered} 
-                    className="w-full py-4 bg-brand-primary text-white rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.3)] hover:scale-[1.02] transition-all font-medium flex items-center justify-center gap-2"
+                    className="w-full py-4 bg-brand-primary text-white rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.3)] md:hover:scale-[1.02] active:scale-95 transition-all font-medium flex items-center justify-center gap-2 min-h-[48px]"
                   >
                     <Play className="w-5 h-5" /> Prioritize Weak Topics
                   </button>
                 )}
                 <button 
                   onClick={restartAll} 
-                  className="w-full py-4 bg-brand-surface border border-brand-border hover:bg-brand-primary/10 rounded-xl transition-all font-medium flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-brand-surface border border-brand-border hover:bg-brand-primary/10 rounded-xl transition-all md:hover:scale-[1.02] active:scale-95 font-medium flex items-center justify-center gap-2 min-h-[48px]"
                 >
                   <RotateCcw className="w-5 h-5" /> Start Over
                 </button>
@@ -699,22 +565,22 @@ export default function StudyMode() {
                        </select>
                      </div>
 
-                     <div className="flex gap-4">
-                       <button 
-                         onClick={togglePodcast} 
-                         className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all flex items-center gap-3 text-lg"
-                       >
-                         {isPlaying ? <><PauseCircle className="w-6 h-6"/> Pause</> : <><PlayCircle className="w-6 h-6"/> Listen to Podcast</>}
-                       </button>
-                       {isPlaying && (
-                         <button 
-                           onClick={stopPodcast} 
-                           className="px-6 py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-bold hover:scale-105 transition-all flex items-center gap-3 text-lg"
-                         >
-                           <StopCircle className="w-6 h-6"/> Stop
-                         </button>
-                       )}
-                     </div>
+                      <div className="flex gap-4 w-full flex-col sm:flex-row justify-center">
+                        <button 
+                          onClick={togglePodcast} 
+                          className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg md:hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg min-h-[48px]"
+                        >
+                          {isPlaying ? <><PauseCircle className="w-6 h-6"/> Pause</> : <><PlayCircle className="w-6 h-6"/> Listen to Podcast</>}
+                        </button>
+                        {isPlaying && (
+                          <button 
+                            onClick={stopPodcast} 
+                            className="px-6 py-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-bold md:hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 text-lg min-h-[48px]"
+                          >
+                            <StopCircle className="w-6 h-6"/> Stop
+                          </button>
+                        )}
+                      </div>
                    </div>
                 </div>
               )}
@@ -794,13 +660,13 @@ export default function StudyMode() {
                         >
                           <button 
                             onClick={() => handleProgress(false)}
-                            className="flex-1 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                            className="flex-1 py-4 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
                           >
                             <X className="w-5 h-5" /> Needs Review
                           </button>
                           <button 
                             onClick={() => handleProgress(true)}
-                            className="flex-1 py-4 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                            className="flex-1 py-4 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 text-green-500 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
                           >
                             <Check className="w-5 h-5" /> Got It
                           </button>
@@ -874,18 +740,18 @@ export default function StudyMode() {
                            }
                         }}
                         disabled={Object.keys(quizAnswers).length < quizList.length}
-                        className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all text-lg disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed"
+                        className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg md:hover:scale-105 active:scale-95 transition-all text-lg disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed min-h-[48px]"
                       >
                          Submit Quiz
                       </button>
                     ) : (
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="text-2xl font-bold p-6 glass-panel rounded-3xl border border-brand-border flex items-center gap-4 text-brand-text">
+                      <div className="flex flex-col items-center gap-4 w-full max-w-sm">
+                        <div className="text-xl sm:text-2xl font-bold p-5 sm:p-6 w-full glass-panel rounded-3xl border border-brand-border flex items-center justify-center gap-4 text-brand-text">
                           Score: <span className={quizScore === quizList.length ? 'text-green-500' : 'text-brand-primary'}>{quizScore} / {quizList.length} ({Math.round(quizScore/quizList.length * 100)}%)</span>
                         </div>
                         <button 
                           onClick={() => { setQuizSubmitted(false); setQuizAnswers({}); setQuizScore(0); }}
-                          className="px-8 py-4 bg-brand-surface border border-brand-border hover:bg-brand-primary/10 text-brand-text rounded-2xl font-bold transition-all text-lg flex items-center gap-2"
+                          className="w-full py-4 bg-brand-surface border border-brand-border md:hover:bg-brand-primary/10 active:scale-95 text-brand-text rounded-2xl font-bold transition-all text-lg flex items-center justify-center gap-2 min-h-[48px]"
                         >
                            <RotateCcw className="w-5 h-5"/> Retry Quiz
                         </button>
@@ -955,21 +821,21 @@ export default function StudyMode() {
                                  console.warn('Failed to persist fill-in-the-blank stats:', err);
                               }
                            }}
-                           className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg hover:scale-105 transition-all text-lg"
+                           className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold shadow-lg md:hover:scale-105 active:scale-95 transition-all text-lg min-h-[48px]"
                         >
                            Check Answers
                         </button>
                      )}
                      <button 
                         onClick={() => setFibReveal(!fibReveal)}
-                        className={`px-8 py-4 rounded-2xl font-bold transition-all text-lg border ${fibReveal ? 'bg-brand-surface text-brand-muted border-brand-border' : 'bg-brand-surface border-brand-primary/30 text-brand-primary hover:bg-brand-primary/10'}`}
+                        className={`px-8 py-4 rounded-2xl font-bold transition-all text-lg border md:hover:scale-105 active:scale-95 ${fibReveal ? 'bg-brand-surface text-brand-muted border-brand-border' : 'bg-brand-surface border-brand-primary/30 text-brand-primary md:hover:bg-brand-primary/10'} min-h-[48px]`}
                      >
                         {fibReveal ? 'Hide Answers' : 'Show All Answers'}
                      </button>
                      {(fibSubmitted || fibReveal) && (
                         <button 
                            onClick={() => { setFibSubmitted(false); setFibAnswers({}); setFibReveal(false); }}
-                           className="px-8 py-4 bg-brand-surface hover:bg-brand-bg border border-brand-border text-brand-text rounded-2xl font-bold transition-all text-lg flex items-center gap-2"
+                           className="px-8 py-4 bg-brand-surface md:hover:bg-brand-bg active:scale-95 border border-brand-border text-brand-text rounded-2xl font-bold transition-all text-lg flex items-center justify-center gap-2 min-h-[48px]"
                         >
                            <RotateCcw className="w-5 h-5"/> Retry
                         </button>
@@ -1249,11 +1115,185 @@ export default function StudyMode() {
         )}
       </AnimatePresence>
 
-      {/* Floating Action Button (FAB) for AI Assistant (visible on < 1024px where right sidebar is hidden) */}
-      <div className="fixed bottom-6 right-6 z-30 lg:hidden">
+      {/* Mobile Sticky Bottom Navigation Bar (rearranging modes for easy reach) */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-brand-surface/95 backdrop-blur-md border-t border-brand-border md:hidden flex justify-around items-center h-16 pb-safe px-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <button
+          onClick={() => setActiveMode('notes')}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold transition-all active:scale-90 ${
+            activeMode === 'notes' ? 'text-brand-primary' : 'text-brand-muted'
+          }`}
+        >
+          <AlignLeft className="w-5 h-5 mb-0.5" />
+          <span>Notes</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMode('flashcards')}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold transition-all active:scale-90 ${
+            activeMode === 'flashcards' ? 'text-brand-primary' : 'text-brand-muted'
+          }`}
+        >
+          <Layers className="w-5 h-5 mb-0.5" />
+          <span>Cards</span>
+        </button>
+
+        {quizList.length > 0 && (
+          <button
+            onClick={() => setActiveMode('multiple_choice')}
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold transition-all active:scale-90 ${
+              activeMode === 'multiple_choice' ? 'text-brand-primary' : 'text-brand-muted'
+            }`}
+          >
+            <Target className="w-5 h-5 mb-0.5" />
+            <span>Quiz</span>
+          </button>
+        )}
+
+        {flashcardSet?.tutor_lesson && (
+          <button
+            onClick={() => setActiveMode('tutor_lesson')}
+            className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold transition-all active:scale-90 ${
+              activeMode === 'tutor_lesson' ? 'text-brand-primary' : 'text-brand-muted'
+            }`}
+          >
+            <BrainCircuit className="w-5 h-5 mb-0.5" />
+            <span>Tutor</span>
+          </button>
+        )}
+
+        <button
+          onClick={() => setMobileMoreOpen(true)}
+          className={`flex flex-col items-center justify-center flex-1 h-full py-1 text-[10px] font-bold transition-all active:scale-90 ${
+            ['podcast', 'fill_blanks', 'written_test', 'true_false', 'definitions', 'content'].includes(activeMode)
+              ? 'text-brand-primary'
+              : 'text-brand-muted'
+          }`}
+        >
+          <Hash className="w-5 h-5 mb-0.5" />
+          <span>More</span>
+        </button>
+      </div>
+
+      {/* Mobile "More Modes" Bottom Drawer Overlay */}
+      <AnimatePresence>
+        {mobileMoreOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMobileMoreOpen(false)}
+              className="fixed inset-0 bg-black z-30 md:hidden"
+            />
+            {/* Bottom Drawer */}
+            <motion.div 
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              className="fixed bottom-0 left-0 right-0 max-h-[70vh] bg-brand-surface rounded-t-[2rem] border-t border-brand-border z-40 p-6 flex flex-col md:hidden pb-10 shadow-2xl"
+            >
+              {/* Drag Handle indicator */}
+              <div className="w-12 h-1 bg-brand-border/80 rounded-full mx-auto mb-4 shrink-0" />
+              
+              <div className="flex items-center justify-between mb-6 pb-2 border-b border-brand-border/40">
+                <span className="font-extrabold text-brand-text text-base">Select Study Mode</span>
+                <button 
+                  onClick={() => setMobileMoreOpen(false)}
+                  className="p-2 text-brand-muted hover:text-brand-text bg-brand-bg border border-brand-border rounded-xl active:scale-95 transition-transform min-w-[36px] min-h-[36px] flex items-center justify-center"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 overflow-y-auto max-h-[45vh] pr-1">
+                {/* Podcast */}
+                <button
+                  onClick={() => { setActiveMode('podcast'); setMobileMoreOpen(false); }}
+                  className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 transition-all active:scale-95 min-h-[80px] ${
+                    activeMode === 'podcast' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-brand-border bg-brand-bg text-brand-muted'
+                  }`}
+                >
+                  <Headphones className="w-6 h-6" />
+                  <span className="text-xs font-bold">Podcast</span>
+                </button>
+
+                {/* Fill-in-the-Blank */}
+                {blanksList.length > 0 && (
+                  <button
+                    onClick={() => { setActiveMode('fill_blanks'); setMobileMoreOpen(false); }}
+                    className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 transition-all active:scale-95 min-h-[80px] ${
+                      activeMode === 'fill_blanks' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-brand-border bg-brand-bg text-brand-muted'
+                    }`}
+                  >
+                    <Type className="w-6 h-6" />
+                    <span className="text-xs font-bold">Fill-in-the-Blank</span>
+                  </button>
+                )}
+
+                {/* Written Test */}
+                {shortList.length > 0 && (
+                  <button
+                    onClick={() => { setActiveMode('written_test'); setMobileMoreOpen(false); }}
+                    className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 transition-all active:scale-95 min-h-[80px] ${
+                      activeMode === 'written_test' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-brand-border bg-brand-bg text-brand-muted'
+                    }`}
+                  >
+                    <BookOpen className="w-6 h-6" />
+                    <span className="text-xs font-bold">Written Test</span>
+                  </button>
+                )}
+
+                {/* True/False */}
+                {trueFalseList.length > 0 && (
+                  <button
+                    onClick={() => { setActiveMode('true_false'); setMobileMoreOpen(false); }}
+                    className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 transition-all active:scale-95 min-h-[80px] ${
+                      activeMode === 'true_false' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-brand-border bg-brand-bg text-brand-muted'
+                    }`}
+                  >
+                    <CheckCircle2 className="w-6 h-6" />
+                    <span className="text-xs font-bold">True / False</span>
+                  </button>
+                )}
+
+                {/* Definitions */}
+                {definitionsList.length > 0 && (
+                  <button
+                    onClick={() => { setActiveMode('definitions'); setMobileMoreOpen(false); }}
+                    className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 transition-all active:scale-95 min-h-[80px] ${
+                      activeMode === 'definitions' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-brand-border bg-brand-bg text-brand-muted'
+                    }`}
+                  >
+                    <BookOpen className="w-6 h-6" />
+                    <span className="text-xs font-bold">Definitions</span>
+                  </button>
+                )}
+
+                {/* Source Content */}
+                {flashcardSet?.raw_content && (
+                  <button
+                    onClick={() => { setActiveMode('content'); setMobileMoreOpen(false); }}
+                    className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 transition-all active:scale-95 min-h-[80px] ${
+                      activeMode === 'content' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-brand-border bg-brand-bg text-brand-muted'
+                    }`}
+                  >
+                    <AlignLeft className="w-6 h-6" />
+                    <span className="text-xs font-bold">Source Content</span>
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Action Button (FAB) for AI Assistant (visible on < 1024px where right sidebar is hidden, and offset upwards to clear bottom tab bar on mobile) */}
+      <div className="fixed bottom-20 md:bottom-6 right-6 z-30 lg:hidden">
         <button
           onClick={() => setMobileChatOpen(true)}
-          className="w-14 h-14 bg-brand-primary text-white rounded-full shadow-[0_4px_25px_rgba(139,92,246,0.5)] flex items-center justify-center hover:scale-110 active:scale-95 transition-all relative border border-brand-primary-hover group"
+          className="w-14 h-14 bg-brand-primary text-white rounded-full shadow-[0_4px_25px_rgba(139,92,246,0.5)] flex items-center justify-center md:hover:scale-110 active:scale-95 transition-all relative border border-brand-primary-hover group min-w-[56px] min-h-[56px]"
           title="Ask AI Study Buddy"
         >
           {/* Pulsing glow ring */}
