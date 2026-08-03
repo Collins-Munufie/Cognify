@@ -217,8 +217,14 @@ export default function Generator() {
       <main className="w-full max-w-7xl mx-auto flex-1 flex flex-col items-center justify-center relative">
         <AnimatePresence mode="wait">
           {phase === 1 && (
-            <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -20 }} className="w-full flex items-center justify-center min-h-[50vh]">
+            <motion.div key="upload" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -20 }} className="w-full flex flex-col items-center justify-center min-h-[50vh] gap-6">
                <UploadSection onUploadFile={handleFileUpload} onUploadUrl={handleUrlSubmit} isGenerating={isGenerating} error={error} />
+               <button 
+                  onClick={() => navigate('/dashboard')}
+                  className="px-6 py-3 bg-brand-surface hover:bg-brand-surface/80 text-brand-text border border-brand-border rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 md:hover:scale-105 min-h-[44px] cursor-pointer"
+               >
+                  <ArrowRight className="w-4 h-4 rotate-180" /> Back to Dashboard
+               </button>
             </motion.div>
           )}
 
