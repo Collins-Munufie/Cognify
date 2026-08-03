@@ -41,13 +41,17 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Redirect to landing if user logs out
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/');
+    }
+  }, [authLoading, user, navigate]);
+
   // Poll for latest stats on load and in background (for real-time updates)
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      navigate('/');
-      return;
-    }
+    if (!user) return;
     
     const refreshData = async () => {
        if (fetchUser) {
@@ -71,7 +75,8 @@ export default function Dashboard() {
     }, 10000);
 
     return () => clearInterval(intervalId);
-  }, [authLoading, user, navigate, fetchActivity, fetchSets, fetchUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading]);
 
   const handleLogout = () => {
     logout();
