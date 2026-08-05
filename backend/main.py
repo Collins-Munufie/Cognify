@@ -10,7 +10,7 @@ from services.video_processor import extract_transcript
 
 import models
 from database import engine, upgrade_db_schema
-from routers import auth, flashcard_sets, user_stats
+from routers import auth, flashcard_sets, user_stats, mock_exams
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -22,6 +22,8 @@ app = FastAPI(title="AI Flashcard Generator Phase 3")
 app.include_router(auth.router)
 app.include_router(flashcard_sets.router)
 app.include_router(user_stats.router)
+app.include_router(mock_exams.router)
+
 
 class UrlRequest(BaseModel):
     url: str

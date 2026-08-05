@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Check, X, RotateCcw, BrainCircuit, Play, Layers, CheckCircle2, Type, ArrowRight, Target, AlignLeft, BookOpen, Headphones, PlayCircle, PauseCircle, StopCircle, Hash, FileText } from 'lucide-react';
+import { ChevronLeft, Check, X, RotateCcw, BrainCircuit, Play, Layers, CheckCircle2, Type, ArrowRight, Target, AlignLeft, BookOpen, Headphones, PlayCircle, PauseCircle, StopCircle, Hash, FileText, Award } from 'lucide-react';
 import api, { getErrorMessage } from '../lib/api';
 import StudyChat from './StudyChat';
+import MockExam from './MockExam';
 import { useAuth } from '../context/AuthContext';
 
 const MarkdownRenderer = lazy(() => import('./MarkdownRenderer'));
+
 
 export default function StudyMode() {
   const { setId } = useParams();
@@ -25,6 +27,7 @@ export default function StudyMode() {
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false);
   const [podcastVoice, setPodcastVoice] = useState('Conversational Mode');
+  const [chatQuery, setChatQuery] = useState('');
 
   const { fetchUser } = useAuth(); // AuthContext to refresh stats
 
@@ -47,6 +50,10 @@ export default function StudyMode() {
   const [writtenAnswers, setWrittenAnswers] = useState({});
   const [writtenGrading, setWrittenGrading] = useState(null);
   const [isGrading, setIsGrading] = useState(false);
+
+  const handleClearChatQuery = useCallback(() => {
+    setChatQuery('');
+  }, []);
 
   // Podcast State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -401,6 +408,9 @@ export default function StudyMode() {
            <button onClick={() => setActiveMode('notes')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-left ${activeMode === 'notes' ? 'bg-brand-primary/10 text-brand-primary font-bold shadow-sm border border-brand-primary/20' : 'text-brand-muted hover:bg-black/5'}`}>
              <AlignLeft className="w-5 h-5 shrink-0" /> <span>Notes</span>
            </button>
+           <button onClick={() => setActiveMode('mock_exam')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-left ${activeMode === 'mock_exam' ? 'bg-brand-primary/10 text-brand-primary font-bold shadow-sm border border-brand-primary/20' : 'text-brand-muted hover:bg-black/5'}`}>
+             <Award className="w-5 h-5 shrink-0" /> <span>AI Mock Exam</span>
+           </button>
            {quizList.length > 0 && (
              <button onClick={() => setActiveMode('multiple_choice')} className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-medium text-left ${activeMode === 'multiple_choice' ? 'bg-brand-primary/10 text-brand-primary font-bold shadow-sm border border-brand-primary/20' : 'text-brand-muted hover:bg-black/5'}`}>
                <Target className="w-5 h-5 shrink-0" /> <span>Multiple Choice</span>
@@ -464,6 +474,7 @@ export default function StudyMode() {
             {activeMode === 'tutor_lesson' && `Learning Module`}
             {activeMode === 'definitions' && `Definition Library`}
             {activeMode === 'content' && `Raw Data Source`}
+            {activeMode === 'mock_exam' && `Simulated Examination`}
           </div>
         </div>
 
@@ -583,6 +594,22 @@ export default function StudyMode() {
                       </div>
                    </div>
                 </div>
+              )}
+
+              {/* AI MOCK EXAM MODE */}
+              {activeMode === 'mock_exam' && (
+                <MockExam 
+                  setId={setId} 
+                  flashcardSet={flashcardSet} 
+                  onSwitchMode={(mode, initialMessage) => {
+                    if (mode === 'chat') {
+                      setChatQuery(initialMessage);
+                      setMobileChatOpen(true);
+                    } else {
+                      setActiveMode(mode);
+                    }
+                  }} 
+                />
               )}
 
               {/* NOTES MODE */}
@@ -1072,7 +1099,7 @@ export default function StudyMode() {
       </main>
 
       <aside className="w-96 fixed right-0 top-0 h-screen hidden lg:flex items-center p-6 bg-brand-bg/50 backdrop-blur-md border-l border-brand-border z-10">
-         <StudyChat rawContent={flashcardSet?.raw_content || ""} />
+         <StudyChat rawContent={flashcardSet?.raw_content || ""} initialQuery={chatQuery} onClearQuery={handleClearChatQuery} />
       </aside>
 
       {/* Mobile Chat Slide-over Drawer */}
@@ -1108,7 +1135,7 @@ export default function StudyMode() {
                 </button>
               </div>
               <div className="flex-1 overflow-hidden flex flex-col h-full">
-                <StudyChat rawContent={flashcardSet?.raw_content || ""} className="w-full h-full border-0 bg-transparent shadow-none" />
+                <StudyChat rawContent={flashcardSet?.raw_content || ""} initialQuery={chatQuery} onClearQuery={handleClearChatQuery} className="w-full h-full border-0 bg-transparent shadow-none" />
               </div>
             </motion.div>
           </>
@@ -1208,6 +1235,17 @@ export default function StudyMode() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 overflow-y-auto max-h-[45vh] pr-1">
+                {/* AI Mock Exam */}
+                <button
+                  onClick={() => { setActiveMode('mock_exam'); setMobileMoreOpen(false); }}
+                  className={`p-4 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 transition-all active:scale-95 min-h-[80px] ${
+                    activeMode === 'mock_exam' ? 'border-brand-primary bg-brand-primary/10 text-brand-primary' : 'border-brand-border bg-brand-bg text-brand-muted'
+                  }`}
+                >
+                  <Award className="w-6 h-6" />
+                  <span className="text-xs font-bold">AI Mock Exam</span>
+                </button>
+
                 {/* Podcast */}
                 <button
                   onClick={() => { setActiveMode('podcast'); setMobileMoreOpen(false); }}

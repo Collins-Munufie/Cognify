@@ -1291,3 +1291,356 @@ async def grade_written_test(questions: list, user_answers: list, context_text: 
     except Exception as e:
         logger.error(f"Grade API failed: {str(e)}")
         raise Exception("Failed to evaluate test answers.")
+
+async def generate_mock_exam_questions(text: str, difficulty: str, fallback_data: dict = None) -> list:
+    """
+    Generates a 30-question mock exam based on provided text (or fallback_data).
+    Difficulty: Easy, Medium, Hard, Exam Level.
+    Uses 2 parallel calls to prevent LLM timeouts and truncation.
+    """
+    if not text.strip() and fallback_data:
+        text_parts = []
+        if fallback_data.get("summary"):
+            text_parts.append(f"Summary of study material:\n{fallback_data['summary']}")
+        if fallback_data.get("key_points"):
+            text_parts.append(f"Key Points:\n{str(fallback_data['key_points'])}")
+        if fallback_data.get("quiz"):
+            text_parts.append(f"Related Multiple Choice Questions:\n{str(fallback_data['quiz'])}")
+        if fallback_data.get("true_false"):
+            text_parts.append(f"Related True/False Statements:\n{str(fallback_data['true_false'])}")
+        text = "\n\n".join(text_parts)
+
+    if not text.strip():
+        text = "General knowledge based on title: " + (fallback_data.get("title") if fallback_data else "Study Set")
+
+    cleaned_text = preprocess_extracted_text(text)
+    if not cleaned_text.strip():
+        cleaned_text = text
+
+    # Prompt Part 1: 15 MCQs
+    prompt_mcq = f"""You are Cognify, an expert EdTech exam designer. Your task is to generate exactly 15 high-quality, academic Multiple Choice Questions (MCQs) based on the provided material.
+Difficulty Level: {difficulty}
+
+Instructions:
+- The questions must be appropriate for the {difficulty} difficulty:
+  - Easy: Focus on simple recall, clear facts, and direct definitions.
+  - Medium: Focus on comprehension, application, and understanding of processes.
+  - Hard: Focus on analysis, edge cases, multi-step scenarios, and critical thinking.
+  - Exam Level: Simulate a rigorous university final exam with a mix of conceptual depth and application challenges.
+- Cover different topics/subtopics from the material to ensure breadth.
+- Do NOT reference structural layout elements.
+- Each MCQ must have exactly 4 options. Shuffled correct option position.
+- Provide a brief, clear explanation for why the correct answer is correct.
+- Question IDs must start at 1 and go up to 15.
+- Return ONLY valid JSON using this exact structure:
+{{
+  "quiz": [
+    {{
+      "id": 1,
+      "type": "mcq",
+      "question": "Question text?",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_answer": "Option A",
+      "explanation": "Why Option A is correct."
+    }}
+  ]
+}}
+
+Source Material:
+{cleaned_text[:15000]}
+"""
+
+    # Prompt Part 2: 5 True/False, 5 Fill-in-the-Blank, 5 Short Answer
+    prompt_others = f"""You are Cognify, an expert EdTech exam designer. Your task is to generate exactly 5 True/False questions, 5 Fill-in-the-Blank questions, and 5 Short Answer questions based on the provided material.
+Difficulty Level: {difficulty}
+
+Instructions:
+- The questions must be appropriate for the {difficulty} difficulty.
+- Cover different topics from the material to ensure breadth.
+- For True/False: statement, correct_answer (boolean true/false), explanation. Question IDs must be 16 to 20.
+- For Fill-in-the-Blank: sentence (containing a single "____" blank), blank_word (the exact answer word/phrase), explanation. Question IDs must be 21 to 25.
+- For Short Answer: question, correct_answer (what a good response should cover or model answer), explanation. Question IDs must be 26 to 30.
+- Return ONLY valid JSON using this exact structure:
+{{
+  "true_false": [
+    {{
+      "id": 16,
+      "type": "true_false",
+      "statement": "True or false statement.",
+      "correct_answer": true,
+      "explanation": "Explanation of statement."
+    }}
+  ],
+  "fill_blanks": [
+    {{
+      "id": 21,
+      "type": "fill_blank",
+      "sentence": "The concept of ____ is important.",
+      "blank_word": "Bresenham",
+      "explanation": "Explanation of blank word."
+    }}
+  ],
+  "short_answers": [
+    {{
+      "id": 26,
+      "type": "short_answer",
+      "question": "Short answer question?",
+      "correct_answer": "Model correct response.",
+      "explanation": "Brief explanation/criteria for grading."
+    }}
+  ]
+}}
+
+Source Material:
+{cleaned_text[:15000]}
+"""
+
+    async def fetch_group(prompt_str, expected_key):
+        for config in FALLBACK_CONFIGS:
+            provider = config["provider"]
+            model_name = config["model"]
+            if provider not in clients:
+                continue
+            try:
+                client = clients[provider]
+                api_kwargs = {
+                    "model": model_name,
+                    "messages": [
+                        {"role": "system", "content": "You are a JSON-only API. You must output ONLY valid JSON."},
+                        {"role": "user", "content": prompt_str}
+                    ],
+                    "temperature": 0.7,
+                }
+                if provider == "groq" and ("llama-3" in model_name or "mixtral" in model_name):
+                    api_kwargs["response_format"] = {"type": "json_object"}
+                    
+                response = await asyncio.wait_for(
+                    client.chat.completions.create(**api_kwargs),
+                    timeout=AI_REQUEST_TIMEOUT_SECONDS,
+                )
+                result_content = response.choices[0].message.content.strip()
+                start_idx = result_content.find('{')
+                end_idx = result_content.rfind('}')
+                if start_idx != -1 and end_idx != -1:
+                    result_content = result_content[start_idx:end_idx+1]
+                data = json.loads(result_content)
+                if expected_key in data or (expected_key == "others" and ("true_false" in data or "fill_blanks" in data)):
+                    return data
+            except Exception as e:
+                logger.warning(f"Mock exam generation fallback: {provider} model {model_name} failed: {str(e)}")
+                continue
+        return {}
+
+    # Run concurrently
+    tasks = [
+        fetch_group(prompt_mcq, "quiz"),
+        fetch_group(prompt_others, "others")
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+
+    mcq_data = results[0] if isinstance(results[0], dict) else {}
+    others_data = results[1] if isinstance(results[1], dict) else {}
+
+    # Combine questions
+    combined_questions = []
+
+    # 1. MCQs (1-15)
+    mcqs = mcq_data.get("quiz", [])
+    if not isinstance(mcqs, list):
+        mcqs = []
+    for idx, q in enumerate(mcqs[:15]):
+        q["id"] = idx + 1
+        q["type"] = "mcq"
+        combined_questions.append(q)
+
+    # Fill up if MCQs are missing
+    while len(combined_questions) < 15:
+        idx = len(combined_questions)
+        combined_questions.append({
+            "id": idx + 1,
+            "type": "mcq",
+            "question": f"Review question {idx + 1} regarding the main concepts.",
+            "options": ["Correct Option", "Alternative Option 1", "Alternative Option 2", "Alternative Option 3"],
+            "correct_answer": "Correct Option",
+            "explanation": "This is a placeholder question generated due to API formatting issues."
+        })
+
+    # 2. True/False (16-20)
+    tfs = others_data.get("true_false", [])
+    if not isinstance(tfs, list):
+        tfs = []
+    for idx, q in enumerate(tfs[:5]):
+        q["id"] = 16 + idx
+        q["type"] = "true_false"
+        combined_questions.append(q)
+
+    while len(combined_questions) < 20:
+        idx = len(combined_questions) - 16
+        combined_questions.append({
+            "id": 16 + idx,
+            "type": "true_false",
+            "statement": "The core concept presented in the study material is correct.",
+            "correct_answer": True,
+            "explanation": "This statement is true based on the general context of the material."
+        })
+
+    # 3. Fill-in-the-Blank (21-25)
+    fbs = others_data.get("fill_blanks", [])
+    if not isinstance(fbs, list):
+        fbs = []
+    for idx, q in enumerate(fbs[:5]):
+        q["id"] = 21 + idx
+        q["type"] = "fill_blank"
+        combined_questions.append(q)
+
+    while len(combined_questions) < 25:
+        idx = len(combined_questions) - 21
+        combined_questions.append({
+            "id": 21 + idx,
+            "type": "fill_blank",
+            "sentence": "The study material is focused on generating ____ mock exams.",
+            "blank_word": "AI",
+            "explanation": "The feature is named AI Mock Exams."
+        })
+
+    # 4. Short Answers (26-30)
+    sas = others_data.get("short_answers", [])
+    if not isinstance(sas, list):
+        sas = []
+    for idx, q in enumerate(sas[:5]):
+        q["id"] = 26 + idx
+        q["type"] = "short_answer"
+        combined_questions.append(q)
+
+    while len(combined_questions) < 30:
+        idx = len(combined_questions) - 26
+        combined_questions.append({
+            "id": 26 + idx,
+            "type": "short_answer",
+            "question": "What is the primary objective of using AI mock exams?",
+            "correct_answer": "To simulate a real exam environment and identify areas for improvement.",
+            "explanation": "AI mock exams help students test knowledge retention and highlight weak topics."
+        })
+
+    return combined_questions
+
+async def grade_mock_exam_short_answers(questions: list, user_answers: dict) -> dict:
+    """
+    Grades the Short Answer questions using the LLM.
+    Returns a dictionary of question_id to dict of {score: int, feedback: str}.
+    """
+    sa_questions = [q for q in questions if q.get("type") == "short_answer"]
+    if not sa_questions:
+        return {}
+
+    eval_input = []
+    for q in sa_questions:
+        qid = str(q.get("id"))
+        eval_input.append({
+            "id": qid,
+            "question": q.get("question"),
+            "model_answer": q.get("correct_answer"),
+            "user_answer": user_answers.get(qid, "")
+        })
+
+    system_prompt = """You are an expert academic grader. Evaluate the student's written answers to the following short answer questions based on the provided correct model answers.
+For each question, assign a score out of 10 and provide brief feedback.
+Output strictly as a JSON object with this exact structure:
+{
+  "grades": {
+    "26": {
+      "score": 8,
+      "feedback": "Your explanation was clear but you missed mentioning that DDA uses floating-point calculations."
+    }
+  }
+}
+Do NOT output any conversational text outside of the JSON block."""
+
+    prompt_str = f"Questions and Student Answers:\n{json.dumps(eval_input)}"
+
+    try:
+        result_content = await _execute_with_fallback([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt_str}
+        ], temperature=0.2)
+        
+        result_content = result_content.strip()
+        start_idx = result_content.find('{')
+        end_idx = result_content.rfind('}')
+        if start_idx != -1 and end_idx != -1:
+            result_content = result_content[start_idx:end_idx+1]
+        
+        data = json.loads(result_content)
+        return data.get("grades", {})
+    except Exception as e:
+        logger.error(f"Mock exam grading API failed: {str(e)}")
+        # Fallback grading
+        fallback_grades = {}
+        for q in sa_questions:
+            qid = str(q.get("id"))
+            user_ans = user_answers.get(qid, "").strip()
+            score = 10 if len(user_ans) > 20 else (5 if len(user_ans) > 5 else 0)
+            fallback_grades[qid] = {
+                "score": score,
+                "feedback": "Graded using fallback logic due to API timeout. Score is based on answer length."
+            }
+        return fallback_grades
+
+async def analyze_mock_exam_performance(graded_questions: list) -> dict:
+    """
+    Analyzes student performance on a mock exam using the LLM.
+    Identifies Strong Topics, Weak Topics, and Actionable Recommendations.
+    """
+    # Create a compact representation of the performance
+    perf_data = []
+    for q in graded_questions:
+        perf_data.append({
+            "id": q.get("id"),
+            "type": q.get("type"),
+            "question": q.get("question") or q.get("statement") or q.get("sentence"),
+            "user_answer": q.get("user_answer"),
+            "correct_answer": q.get("correct_answer") or q.get("blank_word"),
+            "is_correct": q.get("is_correct"),
+            "score": q.get("score") # only for short_answer
+        })
+
+    system_prompt = """You are Cognify, an intelligent AI tutor. Review the student's performance on the mock exam below (containing questions, correct answers, and the student's answers).
+Analyze their performance to identify:
+1. Strong Topics (list 1-3 topics they showed mastery in, based on correct answers)
+2. Weak Topics (list 1-3 topics they struggled with, based on incorrect answers)
+3. Recommendations (3 action items for further study)
+Output strictly as a JSON object with this exact structure:
+{
+  "strong_topics": ["Topic A", "Topic B"],
+  "weak_topics": ["Topic C", "Topic D"],
+  "recommendations": ["Action item 1", "Action item 2", "Action item 3"]
+}
+Do NOT output any conversational text outside of the JSON block."""
+
+    prompt_str = f"Performance Data:\n{json.dumps(perf_data[:40])}"
+
+    try:
+        result_content = await _execute_with_fallback([
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt_str}
+        ], temperature=0.3)
+        
+        result_content = result_content.strip()
+        start_idx = result_content.find('{')
+        end_idx = result_content.rfind('}')
+        if start_idx != -1 and end_idx != -1:
+            result_content = result_content[start_idx:end_idx+1]
+            
+        return json.loads(result_content)
+    except Exception as e:
+        logger.error(f"Performance analysis API failed: {str(e)}")
+        return {
+            "strong_topics": ["General Comprehension"],
+            "weak_topics": ["Review Needed"],
+            "recommendations": [
+                "Review all incorrect answers in detail.",
+                "Reread the study notes for this set.",
+                "Generate another mock exam to test your memory again."
+            ]
+        }
+

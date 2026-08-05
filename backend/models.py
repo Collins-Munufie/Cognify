@@ -80,3 +80,23 @@ class Flashcard(Base):
     set_id = Column(Integer, ForeignKey("flashcard_sets.id", ondelete="CASCADE"), index=True)
 
     flashcard_set = relationship("FlashcardSet", back_populates="flashcards")
+
+class MockExamAttempt(Base):
+    __tablename__ = "mock_exam_attempts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    set_id = Column(Integer, ForeignKey("flashcard_sets.id", ondelete="CASCADE"), index=True)
+    title = Column(String, nullable=False)
+    difficulty = Column(String, nullable=False) # 'Easy', 'Medium', 'Hard', 'Exam Level'
+    time_limit = Column(Integer, nullable=False) # in minutes
+    time_taken = Column(Integer, nullable=True) # in seconds
+    score = Column(Integer, nullable=True) # out of 30
+    percentage = Column(Integer, nullable=True) # 0-100
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    is_submitted = Column(Boolean, default=False)
+    
+    questions = Column(String, nullable=False) # JSON list of 30 questions
+    user_answers = Column(String, nullable=True) # JSON dictionary of user answers
+    analysis = Column(String, nullable=True) # JSON strength/weakness analysis
+

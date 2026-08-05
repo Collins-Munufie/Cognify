@@ -3,7 +3,7 @@ import { Bot, Send, BrainCircuit, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api, { getErrorMessage } from '../lib/api';
 
-export default function StudyChat({ rawContent, className = "h-[calc(100vh-6rem)] w-80 lg:w-96 glass-panel border border-brand-border rounded-3xl sticky top-8" }) {
+export default function StudyChat({ rawContent, initialQuery, onClearQuery, className = "h-[calc(100vh-6rem)] w-80 lg:w-96 glass-panel border border-brand-border rounded-3xl sticky top-8" }) {
   const [messages, setMessages] = useState([
     { id: 1, text: "Here to help you learn! Ask me anything about the material.", sender: 'ai' }
   ]);
@@ -14,6 +14,35 @@ export default function StudyChat({ rawContent, className = "h-[calc(100vh-6rem)
   useEffect(() => {
     endOfMessagesRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  useEffect(() => {
+    if (initialQuery && initialQuery.trim() !== "") {
+      const sendQuery = async () => {
+        const userMessage = { id: Date.now(), text: initialQuery, sender: 'user' };
+        setMessages(prev => [...prev, userMessage]);
+        setIsTyping(true);
+        
+        if (onClearQuery) {
+          onClearQuery();
+        }
+
+        try {
+          const response = await api.post("/api/chat", {
+             messages: [{ id: 1, text: "Here to help you learn! Ask me anything about the material.", sender: 'ai' }, userMessage],
+             context_text: rawContent || "No context provided."
+          }, { longRunning: true });
+          
+          setMessages(prev => [...prev, { id: Date.now() + 1, text: response.data.response, sender: 'ai' }]);
+        } catch (err) {
+          console.error(err);
+          setMessages(prev => [...prev, { id: Date.now() + 1, text: getErrorMessage(err, "I'm having trouble connecting right now. Please try again later."), sender: 'ai' }]);
+        } finally {
+          setIsTyping(false);
+        }
+      };
+      sendQuery();
+    }
+  }, [initialQuery, rawContent, onClearQuery]);
 
   const handleSend = async () => {
     if (!input.trim() || isTyping) return;
