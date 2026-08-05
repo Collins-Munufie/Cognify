@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from pydantic import BaseModel
 import json
 import datetime
@@ -22,7 +22,7 @@ class ExamCreate(BaseModel):
     time_limit: int # in minutes
 
 class ExamSubmit(BaseModel):
-    user_answers: Dict[str, str] # { "question_id": "user answer" }
+    user_answers: Dict[str, Any] # { "question_id": "user answer" }
     time_taken: int # in seconds
 
 def strip_answers_from_questions(questions: list) -> list:
