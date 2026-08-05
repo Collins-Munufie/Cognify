@@ -73,19 +73,19 @@ def get_db():
 from sqlalchemy import text
 
 def upgrade_db_schema(engine):
-    with engine.begin() as conn:
-        # Check and add columns to user_stats table
-        columns_to_add = [
-            ("time_spent_studying", "INTEGER DEFAULT 0"),
-            ("success_generations", "INTEGER DEFAULT 0"),
-            ("failed_generations", "INTEGER DEFAULT 0"),
-            ("processing_status", "VARCHAR DEFAULT 'Idle'")
-        ]
-        for col_name, col_type in columns_to_add:
-            try:
+    # Check and add columns to user_stats table
+    columns_to_add = [
+        ("time_spent_studying", "INTEGER DEFAULT 0"),
+        ("success_generations", "INTEGER DEFAULT 0"),
+        ("failed_generations", "INTEGER DEFAULT 0"),
+        ("processing_status", "VARCHAR DEFAULT 'Idle'")
+    ]
+    for col_name, col_type in columns_to_add:
+        try:
+            with engine.begin() as conn:
                 conn.execute(text(f"ALTER TABLE user_stats ADD COLUMN {col_name} {col_type}"))
                 print(f"Database upgrade: Added column '{col_name}' to 'user_stats' table.")
-            except Exception as e:
-                # Column likely already exists
-                pass
+        except Exception as e:
+            # Column likely already exists, ignore
+            pass
 
