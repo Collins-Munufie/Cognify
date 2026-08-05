@@ -42,13 +42,22 @@ else:
 
 # Provider and Model configurations in order of priority
 FALLBACK_CONFIGS = [
+    # Groq (Primary & Fast Fallbacks)
     {"provider": "groq", "model": "llama-3.3-70b-versatile"},
-    {"provider": "groq", "model": "llama-3.1-70b-versatile"},
-    {"provider": "groq", "model": "mixtral-8x7b-32768"},
+    {"provider": "groq", "model": "llama-3.1-8b-instant"},
+    {"provider": "groq", "model": "llama-3.2-3b-preview"},
+    
+    # Gemini (Secondary Fallbacks)
     {"provider": "gemini", "model": "gemini-1.5-flash"},
     {"provider": "gemini", "model": "gemini-1.5-pro"},
-    {"provider": "openrouter", "model": "meta-llama/llama-3-8b-instruct:free"},
-    {"provider": "openrouter", "model": "google/gemma-2-9b-it:free"}
+    {"provider": "gemini", "model": "gemini-2.5-flash"},
+    
+    # OpenRouter (Tertiary Fallbacks)
+    {"provider": "openrouter", "model": "meta-llama/llama-3.3-70b-instruct"},
+    {"provider": "openrouter", "model": "meta-llama/llama-3.1-8b-instruct"},
+    {"provider": "openrouter", "model": "google/gemma-2-9b-it"},
+    {"provider": "openrouter", "model": "google/gemma-4-31b-it:free"},
+    {"provider": "openrouter", "model": "openai/gpt-oss-20b:free"}
 ]
 AI_REQUEST_TIMEOUT_SECONDS = int(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "45"))
 
