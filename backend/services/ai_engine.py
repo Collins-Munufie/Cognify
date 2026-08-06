@@ -1654,6 +1654,83 @@ Do NOT output any conversational text outside of the JSON block."""
         }
 
 
+async def _call_gemini_rest(model_name: str, messages: list, images: list, api_key: str) -> str:
+    """
+    Makes a direct REST call to the Gemini API, bypassing library compatibility layers.
+    """
+    import requests
+    import asyncio
+    
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+    
+    contents = []
+    system_instruction = None
+    
+    for msg in messages:
+        if msg.get("role") == "system":
+            system_instruction = {"parts": [{"text": msg["content"]}]}
+            break
+            
+    for msg in messages:
+        role = msg.get("role")
+        if role == "system":
+            continue
+            
+        gemini_role = "user" if role == "user" else "model"
+        parts = []
+        content = msg.get("content")
+        
+        if isinstance(content, list):
+            for part in content:
+                if part["type"] == "text":
+                    parts.append({"text": part["text"]})
+                elif part["type"] == "image_url":
+                    img_url = part["image_url"]["url"]
+                    if "," in img_url:
+                        header, base64_data = img_url.split(",", 1)
+                        mime_type = header.split(";")[0].replace("data:", "")
+                    else:
+                        base64_data = img_url
+                        mime_type = "image/jpeg"
+                    parts.append({
+                        "inlineData": {
+                            "mimeType": mime_type,
+                            "data": base64_data
+                        }
+                    })
+        else:
+            parts.append({"text": content})
+            
+        contents.append({
+            "role": gemini_role,
+            "parts": parts
+        })
+        
+    payload = {
+        "contents": contents
+    }
+    if system_instruction:
+        payload["systemInstruction"] = system_instruction
+        
+    res = await asyncio.to_thread(
+        requests.post,
+        url,
+        headers={"Content-Type": "application/json"},
+        json=payload,
+        timeout=30
+    )
+    
+    if res.status_code != 200:
+        raise Exception(f"Gemini API returned status {res.status_code}: {res.text}")
+        
+    res_data = res.json()
+    try:
+        text_response = res_data["candidates"][0]["content"]["parts"][0]["text"]
+        return text_response.strip()
+    except (KeyError, IndexError):
+        raise Exception(f"Unexpected Gemini API response structure: {res_data}")
+
+
 async def analyze_image_with_ai(messages: list, images: list) -> str:
     """
     Analyzes uploaded educational images (diagrams, flowcharts, notes, etc.)
@@ -1705,34 +1782,45 @@ BEHAVIOR GUIDELINES:
 
     # List of vision-capable models
     VISION_FALLBACK_CONFIGS = [
-        {"provider": "groq", "model": "llama-3.2-11b-vision-preview"},
-        {"provider": "groq", "model": "llama-3.2-90b-vision-preview"},
-        {"provider": "gemini", "model": "gemini-1.5-flash"},
-        {"provider": "gemini", "model": "gemini-1.5-pro"},
-        {"provider": "openrouter", "model": "meta-llama/llama-3.2-11b-vision-instruct"},
+        {"provider": "gemini", "model": "gemini-3.5-flash"},
+        {"provider": "gemini", "model": "gemini-3.6-flash"},
+        {"provider": "gemini", "model": "gemini-flash-latest"},
+        {"provider": "openrouter", "model": "openai/gpt-4o-mini"},
+        {"provider": "openrouter", "model": "google/gemini-2.5-flash"}
     ]
     
     for config in VISION_FALLBACK_CONFIGS:
         provider = config["provider"]
         model_name = config["model"]
-        if provider not in clients:
-            continue
+        
         try:
-            logger.info(f"Calling visual LLM {provider.upper()} API with model {model_name}...")
-            client = clients[provider]
-            
-            api_kwargs = {
-                "model": model_name,
-                "messages": api_messages,
-                "temperature": 0.4,
-                "max_tokens": 1500
-            }
-            
-            response = await asyncio.wait_for(
-                client.chat.completions.create(**api_kwargs),
-                timeout=45
-            )
-            return response.choices[0].message.content.strip()
+            if provider == "gemini":
+                api_key = os.getenv("GEMINI_API_KEY")
+                if not api_key:
+                    continue
+                logger.info(f"Calling direct Gemini REST API with model {model_name}...")
+                response_text = await _call_gemini_rest(model_name, api_messages, images, api_key)
+                return response_text
+                
+            elif provider == "openrouter":
+                if "openrouter" not in clients:
+                    continue
+                logger.info(f"Calling OpenRouter API with model {model_name}...")
+                client = clients["openrouter"]
+                
+                api_kwargs = {
+                    "model": model_name,
+                    "messages": api_messages,
+                    "temperature": 0.4,
+                    "max_tokens": 1500
+                }
+                
+                response = await asyncio.wait_for(
+                    client.chat.completions.create(**api_kwargs),
+                    timeout=45
+                )
+                return response.choices[0].message.content.strip()
+                
         except Exception as e:
             logger.warning(f"Visual LLM generation fallback: {provider} model {model_name} failed: {str(e)}")
             continue
