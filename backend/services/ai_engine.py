@@ -1653,3 +1653,89 @@ Do NOT output any conversational text outside of the JSON block."""
             ]
         }
 
+
+async def analyze_image_with_ai(messages: list, images: list) -> str:
+    """
+    Analyzes uploaded educational images (diagrams, flowcharts, notes, etc.)
+    and responds to conversational questions about them using multimodal AI models.
+    """
+    import asyncio
+    
+    system_prompt = """You are Cognify, an intelligent AI tutor specializing in visual learning and computer vision.
+Your task is to analyze the provided educational image(s) (which can be diagrams, flowcharts, notes, screenshots, equations, or illustrations) and answer the student's question accurately, clearly, and step-by-step.
+
+BEHAVIOR GUIDELINES:
+- Provide high-quality, academic explanations tailored to a student's level.
+- Reference specific parts of the image (labels, arrows, colors, coordinates, structures) to ground your answers in the visual context.
+- Solve math or science equations step-by-step, showing your work and explaining the logic.
+- Summarize flowcharts logically by detailing the processes and conditional branches.
+- If multiple images are provided, compare and analyze their relationships or differences.
+- Maintain a helpful, encouraging, and scholarly tone.
+"""
+
+    api_messages = [{"role": "system", "content": system_prompt}]
+    
+    # Find the index of the FIRST user message to attach the images
+    first_user_idx = None
+    for idx, msg in enumerate(messages):
+        if msg.get("sender") == "user":
+            first_user_idx = idx
+            break
+            
+    for idx, msg in enumerate(messages):
+        role = "user" if msg.get("sender") == "user" else "assistant"
+        text = msg.get("text", "")
+        
+        if idx == first_user_idx:
+            # Multi-modal content block
+            content_blocks = [{"type": "text", "text": text}]
+            for img in images:
+                if not img or not img.strip():
+                    continue
+                img_url = img if img.startswith("data:") else f"data:image/jpeg;base64,{img}"
+                content_blocks.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": img_url
+                    }
+                })
+            api_messages.append({"role": role, "content": content_blocks})
+        else:
+            api_messages.append({"role": role, "content": text})
+
+    # List of vision-capable models
+    VISION_FALLBACK_CONFIGS = [
+        {"provider": "groq", "model": "llama-3.2-11b-vision-preview"},
+        {"provider": "groq", "model": "llama-3.2-90b-vision-preview"},
+        {"provider": "gemini", "model": "gemini-1.5-flash"},
+        {"provider": "gemini", "model": "gemini-1.5-pro"},
+        {"provider": "openrouter", "model": "meta-llama/llama-3.2-11b-vision-instruct"},
+    ]
+    
+    for config in VISION_FALLBACK_CONFIGS:
+        provider = config["provider"]
+        model_name = config["model"]
+        if provider not in clients:
+            continue
+        try:
+            logger.info(f"Calling visual LLM {provider.upper()} API with model {model_name}...")
+            client = clients[provider]
+            
+            api_kwargs = {
+                "model": model_name,
+                "messages": api_messages,
+                "temperature": 0.4,
+                "max_tokens": 1500
+            }
+            
+            response = await asyncio.wait_for(
+                client.chat.completions.create(**api_kwargs),
+                timeout=45
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.warning(f"Visual LLM generation fallback: {provider} model {model_name} failed: {str(e)}")
+            continue
+            
+    raise Exception("All visual API providers failed. Please check your internet connection or API keys.")
+

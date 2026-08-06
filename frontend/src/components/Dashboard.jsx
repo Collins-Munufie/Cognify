@@ -279,6 +279,14 @@ export default function Dashboard() {
          <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <Logo size="small" />
             
+            <div className="flex items-center gap-4">
+               <button 
+                  onClick={() => navigate('/image-chat')}
+                  className="px-4 py-2.5 bg-brand-bg hover:bg-brand-surface text-brand-primary border border-brand-border rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer shadow-sm"
+               >
+                  <Sparkles className="w-4 h-4 text-brand-primary" /> Ask About Images
+               </button>
+
                <button 
                   onClick={() => setEditProfileOpen(true)}
                   className="flex items-center gap-3 cursor-pointer md:hover:bg-brand-surface/60 p-2 rounded-xl transition-all duration-75 border border-transparent md:hover:border-brand-border md:hover:scale-102 active:scale-95 min-w-[44px] min-h-[44px] justify-center bg-transparent"
@@ -296,19 +304,28 @@ export default function Dashboard() {
                      <span className="text-[10px] text-brand-primary font-black uppercase tracking-wider leading-none">Pro Profile</span>
                   </div>
                </button>
+            </div>
          </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-6 pt-10 relative z-10">
          
          {/* Dashboard Hero Greeting Card */}
-         <div className="glass-panel p-8 rounded-[2.5rem] border border-brand-border bg-gradient-to-r from-brand-surface to-brand-primary/5 shadow-lg mb-10 overflow-hidden relative">
-            <div className="absolute right-0 top-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div className="z-10">
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-brand-text mb-3">Welcome back, {dashboardData.user.name}</h1>
-              <p className="text-brand-muted text-sm sm:text-base max-w-xl font-medium leading-relaxed">Accelerate your active recall with custom spaced repetition and advanced AI-driven study modules.</p>
-            </div>
-         </div>
+          <div className="glass-panel p-8 rounded-[2.5rem] border border-brand-border bg-gradient-to-r from-brand-surface to-brand-primary/5 shadow-lg mb-10 overflow-hidden relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+             <div className="absolute right-0 top-0 w-64 h-64 bg-brand-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+             <div className="z-10">
+               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-brand-text mb-3">Welcome back, {dashboardData.user.name}</h1>
+               <p className="text-brand-muted text-sm sm:text-base max-w-xl font-medium leading-relaxed">Accelerate your active recall with custom spaced repetition and advanced AI-driven study modules.</p>
+             </div>
+             <div className="z-10 shrink-0 w-full md:w-auto">
+               <button 
+                  onClick={() => navigate('/image-chat')}
+                  className="w-full md:w-auto px-6 py-4 bg-brand-primary hover:bg-brand-primary-hover text-white rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-95 cursor-pointer shadow-md flex items-center justify-center gap-2 md:hover:scale-[1.02]"
+               >
+                  <Sparkles className="w-4 h-4 animate-pulse" /> Ask About Images
+               </button>
+             </div>
+          </div>
 
          {error && (
             <div className="mb-8 p-4 rounded-xl border border-red-500/20 bg-red-500/10 text-red-400">

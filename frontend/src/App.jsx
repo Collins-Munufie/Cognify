@@ -7,6 +7,7 @@ const AuthPage = lazy(() => import('./components/AuthPage'));
 const Dashboard = lazy(() => import('./components/Dashboard'));
 const StudyMode = lazy(() => import('./components/StudyMode'));
 const LandingPage = lazy(() => import('./components/LandingPage'));
+const ImageChat = lazy(() => import('./components/ImageChat'));
 
 function PageLoader({ label = 'Loading Cognify...' }) {
   return (
@@ -46,6 +47,7 @@ function App() {
         <Route path="/profile" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/study/:setId" element={<ProtectedRoute><StudyMode /></ProtectedRoute>} />
+        <Route path="/image-chat" element={<ProtectedRoute><ImageChat /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>

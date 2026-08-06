@@ -100,3 +100,16 @@ class MockExamAttempt(Base):
     user_answers = Column(String, nullable=True) # JSON dictionary of user answers
     analysis = Column(String, nullable=True) # JSON strength/weakness analysis
 
+
+class ImageChatSession(Base):
+    __tablename__ = "image_chat_sessions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title = Column(String, nullable=False)
+    images = Column(String, nullable=False) # JSON list of base64 images
+    messages = Column(String, nullable=False) # JSON list of messages
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    owner = relationship("User")
+
